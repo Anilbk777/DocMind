@@ -32,5 +32,6 @@ def get_vector_store() -> Chroma:
             persist_directory="./dev_chroma_db",
             collection_name="dev_rag_collection",
             embedding_function=get_embedding_model(),
+            collection_metadata={"hnsw:space": "cosine"},
         )
     return _chroma_vector_store

@@ -1,12 +1,17 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile, status, Request
-
 from app.core.services.document_service import DocumentProcessingService
 from app.core.services.retrieval_service import RetrievalService
 from app.utils.logging import LoggerFactory
 from app.api.schemas import ChatRequest, ChatResponse
+
 from app.core.services.rag_service import RagOrchestrationService
 from app.utils.exceptions import RAGServiceException
-from concurrent.futures import ProcessPoolExecutor
+from app.utils.exceptions import (
+    UnsupportedFileTypeError,
+    FileExtractionError,
+    VectorStoreError,
+)
+from app.ingestion.ingestion_pipeline import RAGIngestionPipeline
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -22,6 +27,7 @@ async def upload_document(
     file: UploadFile = File(...),
 ):
     logger.info(f"File received: {file.filename}")
+
     if file.size > MAX_FILE_SIZE:
         logger.error(f"File too large: {file.filename}")
         raise HTTPException(
@@ -31,25 +37,24 @@ async def upload_document(
 
     file_bytes = await file.read()
 
-    # Lazily initialize the process pool on the first upload request.
-    # This avoids spawning worker processes at server startup (slow on Windows).
-    if request.app.state.process_pool is None:
-        worker_cores = request.app.state.worker_cores
-        logger.info(
-            f"First upload received — spawning ProcessPoolExecutor with {worker_cores} worker cores..."
-        )
-        request.app.state.process_pool = ProcessPoolExecutor(max_workers=worker_cores)
+    # 1. Pull shared resources straight out of FastAPI's app state
+    shared_executor = request.app.state.thread_executor
+    vector_store = request.app.state.vector_store
 
-    process_pool = request.app.state.process_pool
-    doc_service = DocumentProcessingService(process_executor=process_pool)
+    # 2. Safely initialize your ingestion components under a shared process loop
+    # Pass your pre-warmed vector store to the pipeline if required by its constructor
+    pipeline = RAGIngestionPipeline(vector_store=vector_store)
+
+    doc_service = DocumentProcessingService(
+        ingestion_pipeline=pipeline, executor=shared_executor
+    )
 
     try:
-        # Await the processing job directly.
-        # The connection remains open so the user gets instant feedback if it passes or fails.
+        # 3. Process the file and await execution safely
         chunks_created = await doc_service.process_document_background(
             file.filename, file_bytes
         )
-        logger.info(f"Chunks created: {chunks_created}")
+        logger.info(f"Chunks created successfully: {chunks_created}")
 
         return {
             "status": "Success",
@@ -57,21 +62,25 @@ async def upload_document(
             "message": f"Successfully parsed document into {chunks_created} vector chunks.",
         }
 
-    except ValueError as val_err:
-        logger.error(
-            f"Validation error for '{file.filename}': {str(val_err)}",
-            exc_info=True,
-        )
+    except UnsupportedFileTypeError as val_err:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(val_err)
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid format: {str(val_err)}",
+        )
+    except FileExtractionError as ext_err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not read document contents: {str(ext_err)}",
+        )
+    except VectorStoreError as db_err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database ingestion subsystem failed: {str(db_err)}",
         )
     except Exception as sys_err:
-        logger.error(
-            f"Unexpected pipeline crash for '{file.filename}': {str(sys_err)}",
-            exc_info=True,
-        )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(sys_err)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unhandled operational error occurred: {str(sys_err)}",
         )
 
 
@@ -79,9 +88,10 @@ async def upload_document(
 async def chat(payload: ChatRequest, request: Request):
     logger.info(f"Chat query received: {payload.query[:30]}...")
     try:
-        retrieval_svc = RetrievalService(
-            vector_store=request.app.state.vector_store
-        )
+        # 1. Initialize retrieval service with the pre-warmed single-process vector store
+        retrieval_svc = RetrievalService(vector_store=request.app.state.vector_store)
+
+        logger.info(f"Provider: {payload.provider}")
         rag_service = RagOrchestrationService(
             provider=payload.provider,
             retrieval_service=retrieval_svc,
@@ -92,13 +102,13 @@ async def chat(payload: ChatRequest, request: Request):
 
     except RAGServiceException as e:
         logger.warning(f"RAG service error on chat query: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        logger.error(
-            f"Unhandled exception in /chat endpoint: {str(e)}",
-            exc_info=True,  # logs full stack trace so you can see the real error
-        )
+        
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {str(e)}",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Unhandled exception in /chat endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="An unexpected error occurred while processing your request.",
         )

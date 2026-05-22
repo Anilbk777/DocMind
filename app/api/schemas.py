@@ -1,6 +1,5 @@
-from app.core.llm_strategies import LLMProvider
 from pydantic import BaseModel, Field
-
+from app.core.llm_strategies import LLMProvider
 
 class ChatRequest(BaseModel):
     query: str = Field(
@@ -9,9 +8,9 @@ class ChatRequest(BaseModel):
         min_length=1,
     )
     provider: LLMProvider = Field(
-        ..., description="The LLM strategy choice. ", include_in_schema=True
+        ..., 
+        description="Select your preferred LLM engine from the dropdown menu."
     )
-
 
 class ChatResponse(BaseModel):
     answer: str = Field(

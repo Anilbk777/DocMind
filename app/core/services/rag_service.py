@@ -12,8 +12,14 @@ logger = LoggerFactory.get_logger(__name__)
 
 
 class RagOrchestrationService:
-    def __init__(self, provider: LLMProvider=LLMProvider.GROQ, retrieval_service: RetrievalService=None):
-        self.retrieval_service = retrieval_service if retrieval_service is not None else RetrievalService()
+    def __init__(
+        self,
+        provider: LLMProvider = LLMProvider.GROQ,
+        retrieval_service: RetrievalService = None,
+    ):
+        self.retrieval_service = (
+            retrieval_service if retrieval_service is not None else RetrievalService()
+        )
         try:
             self._llm = provider.get_strategy().get_model()
             self._parser = StrOutputParser()
@@ -32,9 +38,11 @@ class RagOrchestrationService:
 
         try:
             # Destructure our updated tuple tracking sources
-            context, is_internal_data, sources = await self.retrieval_service.get_context(
-                question
-            )
+            (
+                context,
+                is_internal_data,
+                sources,
+            ) = await self.retrieval_service.get_context(question)
 
             if not context.strip():
                 return "I cannot find any valid local documentation or online resources to answer that question."
@@ -46,7 +54,9 @@ class RagOrchestrationService:
             )
 
             chain = prompt | self._llm | self._parser
-            llm_response = await chain.ainvoke({"context": context, "question": question})
+            llm_response = await chain.ainvoke(
+                {"context": context, "question": question}
+            )
 
             # Append citations gracefully if derived from your local database stack
             if is_internal_data and sources:
@@ -62,6 +72,13 @@ class RagOrchestrationService:
                 f"Unhandled operational failure inside generation sequence: {str(e)}",
                 exc_info=True,
             )
+
+            # Check if it looks like a temporary capacity issue
+            if "503" in str(e) or "demand" in str(e).lower():
+                raise RAGServiceException(
+                    "The AI engine is currently overloaded with traffic. Please wait a moment and try again."
+                )
+
             raise RAGServiceException(
                 "An error occurred while compiling your generative answer pipeline."
             ) from e
