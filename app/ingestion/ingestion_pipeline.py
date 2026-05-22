@@ -3,12 +3,12 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import TextSplitter
 
-from app.core.exceptions import (
+from app.utils.exceptions import (
     FileExtractionError,
     UnsupportedFileTypeError,
     VectorStoreError,
 )
-from app.core.logging import LoggerFactory
+from app.utils.logging import LoggerFactory
 from app.ingestion.file_extractor import EXTRACTOR_REGISTRY
 
 logger = LoggerFactory.get_logger(__name__)

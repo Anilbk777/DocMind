@@ -5,7 +5,7 @@ import pdfplumber
 from docx import Document as DocxDocument
 from typing import Type
 
-from app.core.exceptions import FileExtractionError
+from app.utils.exceptions import FileExtractionError
 
 
 class IExtractor(ABC):
