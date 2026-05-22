@@ -20,3 +20,8 @@ class VectorStoreError(RAGPipelineException):
     """Raised when embedding generation or database insertion fails."""
 
     pass
+
+class RAGServiceException(Exception):
+    """Custom wrapper exception for pipeline processing bugs."""
+
+    pass

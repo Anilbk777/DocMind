@@ -29,7 +29,6 @@ class RetrievalService:
         if self._is_context_adequate(docs_with_scores):
             logger.info("Internal vector database match passed confidence threshold.")
 
-            # Combine page contents
             context_str = "\n\n".join([doc.page_content for doc, _ in docs_with_scores])
 
             # Extract unique sources dynamically from document metadata fields
@@ -51,7 +50,7 @@ class RetrievalService:
         web_snippets = self._query_web_fallback(question)
 
         # Web search results don't have structural local doc sources
-        return web_snippets, False, ["DuckDuckGo Web Search Engine"]
+        return web_snippets, False, ["Web Search Engine"]
 
     def _query_vector_store(self, question: str) -> List[Tuple[Document, float]]:
         try:
