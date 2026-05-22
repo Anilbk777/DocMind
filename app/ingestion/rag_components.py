@@ -17,7 +17,7 @@ text_chunker = RecursiveCharacterTextSplitter(
 
 # 3. Vector Store Component
 logger.info("Configuring development ephemeral Vector Store...")
-vector_store = Chroma(
+chroma_vector_store = Chroma(
     persist_directory="./dev_chroma_db",
     collection_name="dev_rag_collection",
     embedding_function=embedding_model,

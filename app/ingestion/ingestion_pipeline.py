@@ -3,19 +3,24 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import TextSplitter
 
+from app.ingestion.file_extractor import EXTRACTOR_REGISTRY
+from app.ingestion.rag_components import chroma_vector_store, text_chunker
 from app.utils.exceptions import (
     FileExtractionError,
     UnsupportedFileTypeError,
     VectorStoreError,
 )
 from app.utils.logging import LoggerFactory
-from app.ingestion.file_extractor import EXTRACTOR_REGISTRY
 
 logger = LoggerFactory.get_logger(__name__)
 
 
 class RAGIngestionPipeline:
-    def __init__(self, text_splitter: TextSplitter, vector_store: Chroma):
+    def __init__(
+        self,
+        text_splitter: TextSplitter = text_chunker,
+        vector_store: Chroma = chroma_vector_store,
+    ):
 
         self._splitter = text_splitter
         self._vector_store = vector_store

@@ -18,13 +18,13 @@ class RetrievalService:
         self.max_results = max_results
         self._web_search_tool = DuckDuckGoSearchRun()
 
-    def get_context(self, question: str) -> Tuple[str, bool, List[str]]:
+    async def get_context(self, question: str) -> Tuple[str, bool, List[str]]:
         """
         Retrieves context and maps metadata fields.
         Returns: (context_string, is_from_vector_store, list_of_sources)
         """
         # 1. Try vector store retrieval
-        docs_with_scores = self._query_vector_store(question)
+        docs_with_scores = await self._query_vector_store(question)
 
         if self._is_context_adequate(docs_with_scores):
             logger.info("Internal vector database match passed confidence threshold.")
@@ -47,14 +47,14 @@ class RetrievalService:
 
         # 2. Fall back to Web Search
         logger.warning("Vector context insufficient or missing. Fetching web fallback.")
-        web_snippets = self._query_web_fallback(question)
+        web_snippets =await self._query_web_fallback(question)
 
         # Web search results don't have structural local doc sources
         return web_snippets, False, ["Web Search Engine"]
 
-    def _query_vector_store(self, question: str) -> List[Tuple[Document, float]]:
+    async def _query_vector_store(self, question: str) -> List[Tuple[Document, float]]:
         try:
-            return self.vector_store.similarity_search_with_score(
+            return await self.vector_store.asimilarity_search_with_score(
                 question, k=self.max_results
             )
         except Exception as e:
@@ -71,9 +71,9 @@ class RetrievalService:
         _, top_score = docs_with_scores[0]
         return top_score >= self.similarity_threshold
 
-    def _query_web_fallback(self, question: str) -> str:
+    async def _query_web_fallback(self, question: str) -> str:
         try:
-            snippets = self._web_search_tool.run(question)
+            snippets = await self._web_search_tool.arun(question)
             return (
                 ""
                 if not snippets

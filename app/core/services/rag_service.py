@@ -26,13 +26,13 @@ class RagOrchestrationService:
                 "Generation dependency initialization failed."
             ) from e
 
-    def answer_question(self, question: str) -> str:
+    async def answer_question(self, question: str) -> str:
         if not question.strip():
             return "Please provide a valid, non-empty query string."
 
         try:
             # Destructure our updated tuple tracking sources
-            context, is_internal_data, sources = self.retrieval_service.get_context(
+            context, is_internal_data, sources = await self.retrieval_service.get_context(
                 question
             )
 
@@ -46,7 +46,7 @@ class RagOrchestrationService:
             )
 
             chain = prompt | self._llm | self._parser
-            llm_response = chain.invoke({"context": context, "question": question})
+            llm_response = await chain.ainvoke({"context": context, "question": question})
 
             # Append citations gracefully if derived from your local database stack
             if is_internal_data and sources:
