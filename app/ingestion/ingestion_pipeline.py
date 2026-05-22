@@ -4,7 +4,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import TextSplitter
 
 from app.ingestion.file_extractor import EXTRACTOR_REGISTRY
-from app.ingestion.rag_components import chroma_vector_store, text_chunker
+from app.ingestion.rag_components import get_vector_store, text_chunker
 from app.utils.exceptions import (
     FileExtractionError,
     UnsupportedFileTypeError,
@@ -19,11 +19,12 @@ class RAGIngestionPipeline:
     def __init__(
         self,
         text_splitter: TextSplitter = text_chunker,
-        vector_store: Chroma = chroma_vector_store,
+        vector_store: Chroma = None,
     ):
-
         self._splitter = text_splitter
-        self._vector_store = vector_store
+        self._vector_store = (
+            vector_store if vector_store is not None else get_vector_store()
+        )
 
     def process_file(self, filename: str, file_bytes: bytes) -> int:
         """

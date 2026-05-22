@@ -36,8 +36,8 @@ class GroqLlamaStrategy(ILLMStrategy):
 
 
 class LLMProvider(Enum):
-    GEMINI = "gemini-flash"
-    GROQ = "groq-llama"
+    GEMINI = "gemini"
+    GROQ = "groq"
 
     def get_strategy(self) -> ILLMStrategy:
 
@@ -51,5 +51,5 @@ class LLMProvider(Enum):
             raise NotImplementedError(
                 f"No strategy class assigned for provider enum: {self.name}"
             )
-
+        
         return strategy_class()

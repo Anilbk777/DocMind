@@ -6,14 +6,21 @@ from langchain_core.documents import Document
 
 from app.utils.logging import LoggerFactory
 
+# pyrefly: ignore [missing-import]
+from app.ingestion.rag_components import get_vector_store
+
 logger = LoggerFactory.get_logger(__name__)
 
 
 class RetrievalService:
     def __init__(
-        self, vector_store, similarity_threshold: float = 0.4, max_results: int = 3
+        self,
+        vector_store=None,  # Lazy: loaded on first use, not at import time
+        similarity_threshold: float = 0.7,
+        max_results: int = 5,
     ):
-        self.vector_store = vector_store
+        # Use the lazy getter so the model only loads when first needed
+        self.vector_store = vector_store if vector_store is not None else get_vector_store()
         self.similarity_threshold = similarity_threshold
         self.max_results = max_results
         self._web_search_tool = DuckDuckGoSearchRun()
@@ -47,14 +54,14 @@ class RetrievalService:
 
         # 2. Fall back to Web Search
         logger.warning("Vector context insufficient or missing. Fetching web fallback.")
-        web_snippets =await self._query_web_fallback(question)
+        web_snippets = await self._query_web_fallback(question)
 
         # Web search results don't have structural local doc sources
         return web_snippets, False, ["Web Search Engine"]
 
     async def _query_vector_store(self, question: str) -> List[Tuple[Document, float]]:
         try:
-            return await self.vector_store.asimilarity_search_with_score(
+            return await self.vector_store.asimilarity_search_with_relevance_scores(
                 question, k=self.max_results
             )
         except Exception as e:

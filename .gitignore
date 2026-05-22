@@ -9,5 +9,6 @@ wheels/
 # Virtual environments
 .venv
 ./files
-
+./dev_chroma_db
 files/
+.env

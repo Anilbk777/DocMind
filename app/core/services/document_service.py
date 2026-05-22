@@ -71,7 +71,6 @@
 # app/services/document_service.py
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
-from app.utils.logging import LoggerFactory
 
 # Import the base pipeline exception wrappers
 from app.utils.exceptions import (
@@ -79,6 +78,7 @@ from app.utils.exceptions import (
     UnsupportedFileTypeError,
     VectorStoreError,
 )
+from app.utils.logging import LoggerFactory
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -90,8 +90,9 @@ def _isolated_worker_pipeline(filename: str, file_bytes: bytes) -> int:
     """
     #  We import dependencies INSIDE the worker process to avoid serialization (pickling) bugs
     from langchain_chroma import Chroma
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
     from langchain_huggingface import HuggingFaceEmbeddings  # Local embedding execution
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+
     from app.ingestion.ingestion_pipeline import RAGIngestionPipeline
 
     # 1. EMbedding model
@@ -129,7 +130,7 @@ class DocumentProcessingService:
 
     async def process_document_background(
         self, filename: str, file_bytes: bytes
-    ) -> None:
+    ) -> int:
         """
         Asynchronous boundary method called by FastAPI.
         Releases the event loop instantly while the CPU maxes out elsewhere.
@@ -148,12 +149,21 @@ class DocumentProcessingService:
             logger.info(
                 f"Process worker finished successfully. Indexed {total_chunks} blocks for '{filename}'."
             )
+            return total_chunks
 
-        except UnsupportedFileTypeError as e:
-            logger.error(f"Validation rejection on process block: {str(e)}")
-        except FileExtractionError as e:
-            logger.error(f"Text processing anomaly on process block: {str(e)}")
-        except VectorStoreError as e:
-            logger.critical(f"Vector engine block database failure: {str(e)}")
+        except (
+            UnsupportedFileTypeError,
+            FileExtractionError,
+            VectorStoreError,
+        ) as custom_err:
+            logger.error(
+                f"Ingestion pipeline error for '{filename}': {str(custom_err)}"
+            )
+            raise ValueError(str(custom_err))
         except Exception as e:
-            logger.error(f"Unexpected process crash: {str(e)}", exc_info=True)
+            logger.error(
+                f"Unexpected process crash for '{filename}': {str(e)}", exc_info=True
+            )
+            raise RuntimeError(
+                "An unexpected system failure occurred during document processing."
+            )

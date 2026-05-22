@@ -1,8 +1,8 @@
 # rag_service.py
 
 from langchain_core.output_parsers import StrOutputParser
-from llm_strategies import LLMProvider
-from retrieval_service import RetrievalService
+from app.core.llm_strategies import LLMProvider
+from app.core.services.retrieval_service import RetrievalService
 
 from app.core.prompt_builder import RAG_PROMPT_TEMPLATE, WEB_FALLBACK_PROMPT_TEMPLATE
 from app.utils.exceptions import RAGServiceException
@@ -12,8 +12,8 @@ logger = LoggerFactory.get_logger(__name__)
 
 
 class RagOrchestrationService:
-    def __init__(self, provider: LLMProvider, retrieval_service: RetrievalService):
-        self.retrieval_service = retrieval_service
+    def __init__(self, provider: LLMProvider=LLMProvider.GROQ, retrieval_service: RetrievalService=None):
+        self.retrieval_service = retrieval_service if retrieval_service is not None else RetrievalService()
         try:
             self._llm = provider.get_strategy().get_model()
             self._parser = StrOutputParser()
