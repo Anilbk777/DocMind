@@ -28,7 +28,7 @@ class GeminiFlashStrategy(ILLMStrategy):
 
 
 class GroqLlamaStrategy(ILLMStrategy):
-    def __init__(self, model_name: str = "llama-3.1-8b-instant"):
+    def __init__(self, model_name: str = "llama-3.3-70b-versatile"):
         self._llm = ChatGroq(model=model_name, temperature=0.2, max_retries=2)
 
     def get_model(self) -> BaseChatModel:
@@ -51,5 +51,5 @@ class LLMProvider(Enum):
             raise NotImplementedError(
                 f"No strategy class assigned for provider enum: {self.name}"
             )
-        
+
         return strategy_class()

@@ -69,7 +69,7 @@ async def upload_document(
         )
     except FileExtractionError as ext_err:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Could not read document contents: {str(ext_err)}",
         )
     except VectorStoreError as db_err:
@@ -102,7 +102,7 @@ async def chat(payload: ChatRequest, request: Request):
 
     except RAGServiceException as e:
         logger.warning(f"RAG service error on chat query: {str(e)}")
-        
+
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
         )
