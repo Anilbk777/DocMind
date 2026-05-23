@@ -2,7 +2,8 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, status, Request
 from app.core.services.document_service import DocumentProcessingService
 from app.core.services.retrieval_service import RetrievalService
 from app.utils.logging import LoggerFactory
-from app.api.schemas import ChatRequest, ChatResponse
+from app.api.schemas import ChatRequest
+from fastapi.responses import StreamingResponse
 
 from app.core.services.rag_service import RagOrchestrationService
 from app.utils.exceptions import RAGServiceException
@@ -84,9 +85,9 @@ async def upload_document(
         )
 
 
-@router.post("/chat", response_model=ChatResponse, status_code=status.HTTP_200_OK)
+@router.post("/chat", status_code=status.HTTP_200_OK)
 async def chat(payload: ChatRequest, request: Request):
-    logger.info(f"Chat query received: {payload.query[:30]}...")
+    logger.info(f"Chat streaming query received: {payload.query[:30]}...")
     try:
         # 1. Initialize retrieval service with the pre-warmed single-process vector store
         retrieval_svc = RetrievalService(vector_store=request.app.state.vector_store)
@@ -97,8 +98,11 @@ async def chat(payload: ChatRequest, request: Request):
             retrieval_service=retrieval_svc,
         )
 
-        answer = await rag_service.answer_question(question=payload.query)
-        return ChatResponse(answer=answer)
+        # 2. Return the streaming response directly using your async generator
+        return StreamingResponse(
+            rag_service.answer_question_stream(question=payload.query),
+            media_type="text/plain",
+        )
 
     except RAGServiceException as e:
         logger.warning(f"RAG service error on chat query: {str(e)}")

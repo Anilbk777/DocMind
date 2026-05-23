@@ -32,9 +32,10 @@ class RagOrchestrationService:
                 "Generation dependency initialization failed."
             ) from e
 
-    async def answer_question(self, question: str) -> str:
+    async def answer_question_stream(self, question: str) -> str:
         if not question.strip():
-            return "Please provide a valid, non-empty query string."
+            yield "Please provide a valid, non-empty query string."
+            return
 
         try:
             # Destructure our updated tuple tracking sources
@@ -45,7 +46,8 @@ class RagOrchestrationService:
             ) = await self.retrieval_service.get_context(question)
 
             if not context.strip():
-                return "I cannot find any valid local documentation or online resources to answer that question."
+                yield "I cannot find any valid local documentation or online resources to answer that question."
+                return
 
             prompt = (
                 RAG_PROMPT_TEMPLATE
@@ -54,18 +56,28 @@ class RagOrchestrationService:
             )
 
             chain = prompt | self._llm | self._parser
-            llm_response = await chain.ainvoke(
-                {"context": context, "question": question}
-            )
 
-            # Append citations gracefully if derived from your local database stack
+            # llm_response = await chain.ainvoke(
+            #     {"context": context, "question": question}
+            # )
+            async for chunk in chain.astream(
+                {"context": context, "question": question}
+            ):
+                # Safely parse text whether chunk is a raw string or an AIMessageChunk object
+                content = (
+                    chunk
+                    if isinstance(chunk, str)
+                    else getattr(chunk, "content", str(chunk))
+                )
+                yield content
+
+            # 4. TERMINAL INSERTION: The loop finished, meaning the LLM is done.
+            # Append citations cleanly at the very bottom of the user's interface.
             if is_internal_data and sources:
                 citation_block = "\n\n**Sources Gathered:**\n" + "\n".join(
                     [f"- *{source}*" for source in sources]
                 )
-                return f"{llm_response}{citation_block}"
-
-            return llm_response
+                yield citation_block
 
         except Exception as e:
             logger.error(
