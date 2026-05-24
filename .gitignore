@@ -12,3 +12,6 @@ wheels/
 ./dev_chroma_db
 files/
 .env
+node_modules/
+package-lock.json
+package.json
