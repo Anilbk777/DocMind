@@ -1,7 +1,7 @@
 # retrieval_service.py
 from typing import List, Tuple
 
-from langchain_community.tools import DuckDuckGoSearchRun
+# from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.documents import Document
 
 from app.utils.logging import LoggerFactory
@@ -14,7 +14,7 @@ logger = LoggerFactory.get_logger(__name__)
 class RetrievalService:
     def __init__(
         self,
-        vector_store=None, 
+        vector_store=None,
         similarity_threshold: float = 0.4,
         max_results: int = 5,
     ):
@@ -23,7 +23,7 @@ class RetrievalService:
         )
         self.similarity_threshold = similarity_threshold
         self.max_results = max_results
-        self._web_search_tool = DuckDuckGoSearchRun()
+        # self._web_search_tool = DuckDuckGoSearchRun()
 
     async def get_context(self, question: str) -> Tuple[str, bool, List[str]]:
         """
@@ -64,10 +64,10 @@ class RetrievalService:
 
             return context_str, True, sources
 
-        # 2. Fall back to Web Search if zero chunks cleared 0.4
-        logger.warning("Vector context insufficient or missing. Fetching web fallback.")
-        web_snippets = await self._query_web_fallback(question)
-        return web_snippets, False, ["Web Search Engine"]
+        logger.warning(
+            "Vector context insufficient or missing. Using llm general response."
+        )
+        return "", False, []
 
     async def _query_vector_store(self, question: str) -> List[Tuple[Document, float]]:
         try:

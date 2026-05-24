@@ -1,0 +1,161 @@
+ :root {
+            --peach: #FEBE98;
+            --rose: #DF7F83;
+            --blush: #F8CFBA;
+            --cream: #F2E9D9;
+            --coral: #F87472;
+            --charcoal: #464646;
+            --white: #FDFAF7;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--cream);
+            color: var(--charcoal);
+            min-height: 100vh;
+        }
+
+        .font-display {
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--cream);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--blush);
+            border-radius: 2px;
+        }
+
+        /* Pulsing dot */
+        @keyframes pulse-peach {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(0.85);
+            }
+        }
+
+        .pulse {
+            animation: pulse-peach 2s ease-in-out infinite;
+        }
+
+        /* Upload drop zone */
+        .drop-zone {
+            border: 1.5px dashed var(--blush);
+            background: var(--white);
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--rose);
+            background: #fdf6f0;
+        }
+
+        /* Input focus */
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--rose);
+            box-shadow: 0 0 0 3px rgba(223, 127, 131, 0.12);
+        }
+
+        /* Send button */
+        .send-btn {
+            background: var(--charcoal);
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .send-btn:hover {
+            background: var(--rose);
+        }
+
+        .send-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Status badge anim */
+        @keyframes fadeSlide {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-anim {
+            animation: fadeSlide 0.25s ease-out;
+        }
+
+        /* Typing cursor blink */
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .cursor::after {
+            content: '|';
+            animation: blink 0.8s step-end infinite;
+            color: var(--rose);
+            font-weight: 300;
+        }
+
+        /* Select styling */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23464646'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 28px !important;
+        }
+
+        /* Chat message reveal */
+        @keyframes msgIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-in {
+            animation: msgIn 0.2s ease-out;
+        }
+
+        /* Divider wave */
+        .divider-wave {
+            width: 48px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--peach), var(--rose));
+            border-radius: 1px;
+        }

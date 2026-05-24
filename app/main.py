@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from app.api import routers
 from app.utils.logging import LoggerFactory
 from app.ingestion.rag_components import get_vector_store
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 logger = LoggerFactory.get_logger(__name__)
@@ -21,10 +22,9 @@ async def app_lifespan(app: FastAPI):
     # Create a shared ThreadPoolExecutor for heavy file parsing tasks
     logger.info("Initializing application ThreadPoolExecutor...")
     app.state.thread_executor = ThreadPoolExecutor(
-        max_workers=4, 
-        thread_name_prefix="ingestion_worker"
+        max_workers=4, thread_name_prefix="ingestion_worker"
     )
-    
+
     logger.info("Server is fully warmed up and ready to accept requests.")
     yield
 
@@ -35,6 +35,14 @@ async def app_lifespan(app: FastAPI):
 
 app = FastAPI(title="Local RAG Development Server", lifespan=app_lifespan)
 app.include_router(routers.router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
