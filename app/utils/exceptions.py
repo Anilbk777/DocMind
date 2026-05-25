@@ -21,7 +21,11 @@ class VectorStoreError(RAGPipelineException):
 
     pass
 
+
 class RAGServiceException(Exception):
     """Custom wrapper exception for pipeline processing bugs."""
 
+    pass
+
+class FileCannotBeDeleted(Exception):
     pass

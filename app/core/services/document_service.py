@@ -1,4 +1,5 @@
 import asyncio
+from langchain_chroma import Chroma
 from concurrent.futures import ThreadPoolExecutor
 from app.utils.logging import LoggerFactory
 
@@ -7,7 +8,9 @@ from app.utils.exceptions import (
     FileExtractionError,
     UnsupportedFileTypeError,
     VectorStoreError,
+    FileCannotBeDeleted,
 )
+from app.storage.factory_storage import get_storage_service
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -66,3 +69,36 @@ class DocumentProcessingService:
         Synchronous proxy execution worker block running inside a thread assignment.
         """
         return self._pipeline.process_file(filename, file_bytes)
+
+    async def delete_document(self, file_name: str, vector_store: Chroma):
+        logger.info(f"Initiating the deletion of file: '{file_name}'")
+        chroma_deleted = False
+        disk_deleted = False
+
+        try:
+            await asyncio.to_thread(vector_store.delete, where={"source": file_name})
+            chroma_deleted = True
+            logger.info(
+                f"Vector embeddings matching source '{file_name}' dropped from ChromaDB."
+            )
+        except Exception as db_err:
+            logger.error(
+                f"Vector store database purge failed for '{file_name}': {str(db_err)}"
+            )
+            raise FileCannotBeDeleted("Vector store database purge failed.") from db_err
+
+        try:
+            storage_svc = get_storage_service()
+            disk_deleted = await storage_svc.delete_file(file_name)
+        except Exception as disk_err:
+            logger.error(
+                f"Physical disk purge failed for '{file_name}': {str(disk_err)}"
+            )
+            raise FileCannotBeDeleted("Physical disk purge failed") from disk_err
+
+        if not chroma_deleted or not disk_deleted:
+            raise FileCannotBeDeleted(
+                f"Could not drop asset references for '{file_name}' ."
+            )
+
+        return {"chroma_purged": chroma_deleted, "disk_removed": disk_deleted}

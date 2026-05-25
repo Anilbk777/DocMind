@@ -3,10 +3,12 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI
 from dotenv import load_dotenv
 
-from app.api import routers
+
 from app.utils.logging import LoggerFactory
 from app.ingestion.rag_components import get_vector_store
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.routers.upload_router import router as upload_router
+from app.api.routers.chat_router import router as chat_router
 
 load_dotenv()
 logger = LoggerFactory.get_logger(__name__)
@@ -34,7 +36,8 @@ async def app_lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Local RAG Development Server", lifespan=app_lifespan)
-app.include_router(routers.router)
+app.include_router(upload_router)
+app.include_router(chat_router)
 
 app.add_middleware(
     CORSMiddleware,

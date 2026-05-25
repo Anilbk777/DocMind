@@ -1,0 +1,54 @@
+.rowAI   { display: flex; gap: 10px; align-items: flex-start; }
+.rowUser { display: flex; gap: 8px; align-items: flex-end; justify-content: flex-end; }
+
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; flex-shrink: 0;
+}
+.avatarAI   { background: var(--blush); color: var(--rose); margin-top: 2px; }
+.avatarUser { background: var(--peach); color: var(--charcoal); }
+
+.bubbleAI {
+  flex: 1; min-width: 0;
+  background: var(--white);
+  border: 1px solid var(--blush);
+  border-radius: 4px 14px 14px 14px;
+  padding: 14px 16px;
+}
+
+.bubbleUser {
+  max-width: min(480px, 72%);
+  background: var(--peach); border: 1px solid var(--peach);
+  border-radius: 14px 14px 4px 14px;
+  padding: 10px 14px;
+  font-size: 0.875rem; line-height: 1.6;
+  color: var(--charcoal); word-break: break-word; white-space: pre-wrap;
+}
+
+/* Sources */
+.sourcesBlock {
+  margin-top: 12px; border-top: 1px solid var(--blush); padding-top: 10px;
+}
+.sourcesToggle {
+  display: flex; align-items: center; gap: 6px;
+  cursor: pointer; user-select: none;
+  font-size: 0.75rem; font-weight: 500; color: var(--rose);
+  background: none; border: none; padding: 0;
+  font-family: 'DM Sans', sans-serif;
+  transition: opacity 0.15s;
+}
+.sourcesToggle:hover { opacity: 0.7; }
+.sourcesToggle svg { transition: transform 0.2s; }
+.sourcesToggle.open svg { transform: rotate(180deg); }
+
+.sourcesList { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px;
+  background: var(--cream); border: 1px solid var(--blush);
+  border-radius: 20px; font-size: 0.72rem; color: var(--charcoal);
+  width: fit-content; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

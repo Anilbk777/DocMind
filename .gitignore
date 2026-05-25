@@ -10,8 +10,8 @@ wheels/
 .venv
 ./files
 ./dev_chroma_db
+./node_modules/
+./package-lock.json
+./package.json
 files/
 .env
-node_modules/
-package-lock.json
-package.json

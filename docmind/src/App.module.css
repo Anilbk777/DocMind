@@ -1,0 +1,19 @@
+.shell {
+  display: flex; height: 100vh; overflow: hidden;
+}
+
+.chatCol {
+  flex: 1; display: flex; flex-direction: column;
+  height: 100vh; overflow: hidden; min-width: 0;
+}
+
+.topbar {
+  height: 56px; background: var(--white);
+  border-bottom: 1px solid var(--blush);
+  display: flex; align-items: center;
+  padding: 0 24px; gap: 10px; flex-shrink: 0;
+}
+
+.topbarTitle {
+  font-size: 13px; font-weight: 500; color: var(--charcoal);
+}

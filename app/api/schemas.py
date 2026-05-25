@@ -11,3 +11,8 @@ class ChatRequest(BaseModel):
     provider: LLMProvider = Field(
         ..., description="Select your preferred LLM engine from the dropdown menu."
     )
+
+
+class DocumentResponse(BaseModel):
+    file_name: str
+    storage_uri: str
