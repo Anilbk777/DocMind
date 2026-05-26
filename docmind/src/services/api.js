@@ -5,7 +5,8 @@ export async function uploadDocument(file) {
   fd.append('file', file);
   const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: fd });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Upload failed');
+  // if (!res.ok) throw new Error(data.detail || 'Upload failed');
+  if (!res.ok) throw new Error('Upload failed');
   return data;
 }
 
@@ -25,7 +26,8 @@ export async function deleteDocument(filename) {
   });
   if (!res.ok && res.status !== 204) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Delete failed (${res.status})`);
+    // throw new Error(data.detail || `Delete failed (${res.status})`);
+    throw new Error(`Delete failed (${res.status})`);
   }
   return res.status;
 }
@@ -37,7 +39,7 @@ export async function* streamChat(query, provider) {
     body: JSON.stringify({ query, provider }),
   });
   if (!res.ok) throw new Error('Connection failed');
-  const reader  = res.body.getReader();
+  const reader = res.body.getReader();
   const decoder = new TextDecoder();
   while (true) {
     const { value, done } = await reader.read();
