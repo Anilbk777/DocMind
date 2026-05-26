@@ -1,4 +1,4 @@
-.shell {
+/* .shell {
   display: flex; height: 100vh; overflow: hidden;
 }
 
@@ -16,4 +16,87 @@
 
 .topbarTitle {
   font-size: 13px; font-weight: 500; color: var(--charcoal);
+} */
+
+
+/* =====================================================================================================================================
+*/
+
+
+
+.shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.chatCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.topbar {
+  height: 56px;
+  background: var(--white);
+  border-bottom: 1px solid var(--blush);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.topbarTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--charcoal);
+}
+
+/* Hamburger button — hidden on desktop */
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--blush);
+  background: var(--cream);
+  color: var(--charcoal);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.hamburger:hover { background: var(--blush); }
+
+/* Backdrop — mobile only */
+.backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(70, 70, 70, 0.3);
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0 16px;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  .backdrop {
+    display: block;
+  }
 }
