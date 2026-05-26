@@ -1,4 +1,4 @@
-.sidebar {
+/* .sidebar {
   width: 260px; flex-shrink: 0;
   background: var(--white);
   border-right: 1px solid var(--blush);
@@ -58,4 +58,143 @@
   flex-shrink: 0;
 }
 .tip { font-size: 11px; color: var(--charcoal); opacity: .45; line-height: 1.5; }
+.tip span { color: var(--rose); font-weight: 500; opacity: 1; } */
+
+
+
+/* ============================================================================================================= */
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--white);
+  border-right: 1px solid var(--blush);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  /* desktop: normal flow */
+  position: relative;
+  z-index: 50;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--blush);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Close button — mobile only */
+.closeBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--blush);
+  background: var(--cream);
+  color: var(--charcoal);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.closeBtn:hover { background: var(--blush); }
+
+.pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--coral);
+  flex-shrink: 0;
+  animation: pulse-peach 2s ease-in-out infinite;
+}
+@keyframes pulse-peach {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .6; transform: scale(.85); }
+}
+
+.brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--charcoal);
+}
+.brand span { color: var(--rose); }
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.section { display: flex; flex-direction: column; }
+
+.sectionLabel {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--rose);
+}
+
+.divider {
+  width: 36px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--peach), var(--rose));
+  border-radius: 1px;
+  margin: 6px 0 10px;
+}
+
+.sectionHint {
+  font-size: 11px;
+  color: var(--charcoal);
+  opacity: .5;
+  line-height: 1.5;
+}
+
+.footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--blush);
+  flex-shrink: 0;
+}
+.tip { font-size: 11px; color: var(--charcoal); opacity: .45; line-height: 1.5; }
 .tip span { color: var(--rose); font-weight: 500; opacity: 1; }
+
+/* ── Mobile: sidebar becomes a fixed left drawer ── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 24px rgba(70, 70, 70, 0.12);
+  }
+
+  /* isOpen class toggled from JS via prop */
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .closeBtn {
+    display: flex;
+  }
+}
