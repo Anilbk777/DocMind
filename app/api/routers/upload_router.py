@@ -34,9 +34,6 @@ async def upload_document(
             detail=f"File too large. Maximum size is {MAX_FILE_SIZE / (1024 * 1024)} MB.",
         )
 
-    storage_svc = get_storage_service()
-    saved_uri = await storage_svc.upload_file(file, folder="documents")
-
     file_bytes = await file.read()
 
     pipeline = RAGIngestionPipeline(vector_store=request.app.state.vector_store)
@@ -46,11 +43,21 @@ async def upload_document(
     )
 
     try:
+        logger.info("Chunks creation process started")
         chunks_created = await doc_service.process_document_background(
             file.filename, file_bytes
         )
-        logger.info(f"Chunks created successfully: {chunks_created}")
+        logger.info("Chunk creation completed")
 
+        logger.info("Storing document in storage")
+        await file.seek(0)
+        storage_svc = get_storage_service()
+        saved_uri = await storage_svc.upload_file(file, folder="documents")
+        logger.info("Document stored successfully")
+
+        logger.info(
+            f"Chunks created and document stored successfully: {chunks_created}"
+        )
         return {
             "status": "Success",
             "filename": file.filename,
