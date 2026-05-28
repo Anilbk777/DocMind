@@ -1,8 +1,9 @@
 import asyncio
-from langchain_chroma import Chroma
+
+# from langchain_chroma import Chroma
 from concurrent.futures import ThreadPoolExecutor
 from app.utils.logging import LoggerFactory
-
+from app.ingestion.rag_components import VectorStore
 from app.ingestion.ingestion_pipeline import RAGIngestionPipeline
 from app.utils.exceptions import (
     FileExtractionError,
@@ -16,16 +17,13 @@ logger = LoggerFactory.get_logger(__name__)
 
 
 class DocumentProcessingService:
-    def __init__(
-        self, ingestion_pipeline: RAGIngestionPipeline, executor: ThreadPoolExecutor
-    ):
+    def __init__(self, executor: ThreadPoolExecutor):
         """
         Manages async background document execution windows in development.
 
-        :param ingestion_pipeline: The structural processing pipeline instance.
         :param executor: A shared ThreadPoolExecutor instance to keep heavy CPU loads off the event loop.
         """
-        self._pipeline = ingestion_pipeline
+        self._ingestion_pipeline = RAGIngestionPipeline()
         self._executor = executor
 
     async def process_document_background(
@@ -68,12 +66,18 @@ class DocumentProcessingService:
         """
         Synchronous proxy execution worker block running inside a thread assignment.
         """
-        return self._pipeline.process_file(filename, file_bytes)
+        return self._ingestion_pipeline.process_file(filename, file_bytes)
 
-    async def delete_document(self, file_name: str, vector_store: Chroma):
+    async def get_documents(self):
+        storage_svc = get_storage_service()
+        documents = await storage_svc.get_documents()
+        return documents
+
+    async def delete_document(self, file_name: str):
         logger.info(f"Initiating the deletion of file: '{file_name}'")
         chroma_deleted = False
         disk_deleted = False
+        vector_store = VectorStore.get_vector_store()
 
         try:
             await asyncio.to_thread(vector_store.delete, where={"source": file_name})

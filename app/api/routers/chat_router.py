@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Request
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.schemas import ChatRequest
 from fastapi.responses import StreamingResponse
@@ -10,15 +10,14 @@ from app.utils.logging import LoggerFactory
 logger = LoggerFactory.get_logger(__name__)
 
 
-def _build_rag_service(request: Request, payload) -> RagOrchestrationService:
+def _build_rag_service(payload) -> RagOrchestrationService:
     """
     Factory kept separate so it's easy to swap in a cached/singleton
     service per provider in the future without touching the endpoint logic.
     """
-    retrieval_svc = RetrievalService(vector_store=request.app.state.vector_store)
+    retrieval_svc = RetrievalService()
     return RagOrchestrationService(
-        provider=payload.provider,
-        retrieval_service=retrieval_svc,
+        provider=payload.provider, retrieval_service=retrieval_svc
     )
 
 
@@ -26,11 +25,11 @@ router = APIRouter(prefix="/api/v1", tags=["RAG API"])
 
 
 @router.post("/chat", status_code=status.HTTP_200_OK)
-async def chat(payload: ChatRequest, request: Request):
+async def chat(payload: ChatRequest):
     logger.info(f"Chat streaming query received: {payload.query[:30]}...")
 
     try:
-        rag_service = _build_rag_service(request, payload)
+        rag_service = _build_rag_service(payload)
         stream = rag_service.answer_question_stream(question=payload.query)
     except RAGServiceException as e:
         logger.warning(f"RAG service init error: {e}")

@@ -6,7 +6,7 @@ from langchain_core.documents import Document
 
 from app.utils.logging import LoggerFactory
 
-from app.ingestion.rag_components import get_vector_store
+from app.ingestion.rag_components import VectorStore
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -14,16 +14,12 @@ logger = LoggerFactory.get_logger(__name__)
 class RetrievalService:
     def __init__(
         self,
-        vector_store=None,
         similarity_threshold: float = 0.4,
         max_results: int = 5,
     ):
-        self.vector_store = (
-            vector_store if vector_store is not None else get_vector_store()
-        )
+        self.vector_store = VectorStore.get_vector_store()
         self.similarity_threshold = similarity_threshold
         self.max_results = max_results
-        # self._web_search_tool = DuckDuckGoSearchRun()
 
     async def get_context(self, question: str) -> Tuple[str, bool, List[str]]:
         """
