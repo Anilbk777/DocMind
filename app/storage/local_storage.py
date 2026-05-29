@@ -33,6 +33,23 @@ class LocalStorageService(BaseStorageService):
         finally:
             await file.seek(0)
 
+    async def upload_file_bytes(self, file_name: str, file_bytes: bytes, folder: str) -> str:
+        target_dir = self.base_dir / folder
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = target_dir / file_name
+
+        try:
+            async with aiofiles.open(file_path, "wb") as f:
+                await f.write(file_bytes)
+
+            logger.info(f"File bytes successfully stored locally at: {file_path}")
+            return str(file_path)
+
+        except Exception as e:
+            logger.error(f"Local file write failure: {str(e)}")
+            raise e
+
     async def get_documents(self) -> list[dict[str, str]]:
         """Get all stored documents"""
         try:

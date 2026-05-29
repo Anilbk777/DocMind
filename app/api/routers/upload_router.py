@@ -1,14 +1,17 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile, status, Depends
+from fastapi import (
+    APIRouter,
+    File,
+    HTTPException,
+    UploadFile,
+    status,
+    Depends,
+    BackgroundTasks,
+)
+import uuid
+from app.core.services.job_tracker import job_tracker
 from app.core.services.document_service import DocumentProcessingService
 from app.utils.logging import LoggerFactory
-
-from app.utils.exceptions import (
-    UnsupportedFileTypeError,
-    FileExtractionError,
-    VectorStoreError,
-    FileCannotBeDeleted,
-)
-from app.storage.factory_storage import get_storage_service
+from app.utils.exceptions import FileCannotBeDeleted
 from app.api.schemas import DocumentResponse
 from app.api.dependencies import get_document_processing_service
 
@@ -20,8 +23,9 @@ MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 router = APIRouter(prefix="/api/v1", tags=["RAG API"])
 
 
-@router.post("/upload", status_code=status.HTTP_201_CREATED)
+@router.post("/upload", status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     doc_service: DocumentProcessingService = Depends(get_document_processing_service),
 ):
@@ -36,49 +40,25 @@ async def upload_document(
 
     file_bytes = await file.read()
 
-    try:
-        logger.info("Chunks creation process started")
-        chunks_created = await doc_service.process_document_background(
-            file.filename, file_bytes
-        )
-        logger.info("Chunk creation completed")
+    job_id = str(uuid.uuid4())
+    job_tracker.create_job(job_id, file.filename)
 
-        logger.info("Storing document in storage")
-        await file.seek(0)
-        storage_svc = get_storage_service()
-        saved_uri = await storage_svc.upload_file(file, folder="documents")
-        logger.info("Document stored successfully")
+    logger.info(
+        f"Queueing document '{file.filename}' for background processing with job_id {job_id}."
+    )
+    background_tasks.add_task(
+        doc_service.process_and_store_document_background,
+        job_id,
+        file.filename,
+        file_bytes,
+    )
 
-        logger.info(
-            f"Chunks created and document stored successfully: {chunks_created}"
-        )
-        return {
-            "status": "Success",
-            "filename": file.filename,
-            "saved_path": saved_uri,
-            "message": f"Successfully parsed document into {chunks_created} vector chunks.",
-        }
-
-    except UnsupportedFileTypeError:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid format: please select only one supported file type (.pdf, .docx, .txt)",
-        )
-    except FileExtractionError:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Could not read document contents, File may be corrupted or damaged",
-        )
-    except VectorStoreError:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to write vector chunks to the database, Please try again later",
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unhandled operational error occurred, Please try again later",
-        )
+    return {
+        "status": "Accepted",
+        "job_id": job_id,
+        "filename": file.filename,
+        "message": "Document accepted and is being processed in the background.",
+    }
 
 
 @router.get(
@@ -126,3 +106,20 @@ async def delete_file(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected internal server error occurred while processing your request.",
         )
+
+
+@router.get("/jobs", status_code=status.HTTP_200_OK)
+async def get_all_jobs():
+    """Returns all background jobs."""
+    return job_tracker.get_all_jobs()
+
+
+@router.get("/jobs/{job_id}", status_code=status.HTTP_200_OK)
+async def get_job_status(job_id: str):
+    """Returns the status of a specific background job."""
+    job = job_tracker.get_job(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found."
+        )
+    return job

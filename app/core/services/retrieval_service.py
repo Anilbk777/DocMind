@@ -1,11 +1,6 @@
-# retrieval_service.py
 from typing import List, Tuple
-
-# from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.documents import Document
-
 from app.utils.logging import LoggerFactory
-
 from app.ingestion.rag_components import VectorStore
 
 logger = LoggerFactory.get_logger(__name__)
@@ -84,16 +79,3 @@ class RetrievalService:
                 f"Vector database search failed unexpectedly: {str(e)}", exc_info=True
             )
             return []
-
-    async def _query_web_fallback(self, question: str) -> str:
-        try:
-            snippets = await self._web_search_tool.arun(question)
-            return (
-                ""
-                if not snippets
-                or "No good DuckDuckGo Search Result available" in snippets
-                else snippets
-            )
-        except Exception as e:
-            logger.error(f"DuckDuckGo infrastructure failure: {str(e)}", exc_info=True)
-            return ""

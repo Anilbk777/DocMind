@@ -8,6 +8,10 @@ class BaseStorageService(ABC):
         pass
 
     @abstractmethod
+    async def upload_file_bytes(self, file_name: str, file_bytes: bytes, folder: str) -> str:
+        pass
+
+    @abstractmethod
     async def get_documents(self) -> list[dict[str, str]]:
         pass
 

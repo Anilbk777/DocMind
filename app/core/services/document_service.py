@@ -10,6 +10,7 @@ from app.utils.exceptions import (
     UnsupportedFileTypeError,
     VectorStoreError,
     FileCannotBeDeleted,
+    DocumentRetrievalError,
 )
 from app.storage.factory_storage import get_storage_service
 
@@ -62,6 +63,35 @@ class DocumentProcessingService:
             )
             raise
 
+    async def process_and_store_document_background(self, job_id: str, file_name: str, file_bytes: bytes) -> None:
+        """
+        Orchestrates the atomic ingestion and storage of a document.
+        Designed to be run as a FastAPI BackgroundTask.
+        """
+        from app.core.services.job_tracker import job_tracker
+        logger.info(f"Starting background processing for job {job_id} ('{file_name}')")
+        try:
+            # Step 1: Ingest into Vector Store (heavy CPU task on ThreadPool)
+            chunks_created = await self.process_document_background(file_name, file_bytes)
+            logger.info(f"Successfully processed {chunks_created} chunks for '{file_name}'")
+
+            # Step 2: Save to Local Storage
+            storage_svc = get_storage_service()
+            try:
+                saved_path = await storage_svc.upload_file_bytes(file_name, file_bytes, folder="documents")
+                logger.info(f"Successfully saved '{file_name}' to storage.")
+                # Mark job as success
+                job_tracker.update_job_success(job_id, saved_path, chunks_created)
+            except Exception as storage_err:
+                logger.error(f"Failed to save '{file_name}' to storage: {storage_err}. Rolling back vector store...")
+                # Rollback vector store insertion since disk storage failed
+                await self.delete_document(file_name)
+                raise storage_err
+
+        except Exception as e:
+            logger.error(f"Background processing failed for job {job_id} ('{file_name}'): {str(e)}")
+            job_tracker.update_job_error(job_id, str(e))
+
     def _run_blocking_pipeline(self, filename: str, file_bytes: bytes) -> int:
         """
         Synchronous proxy execution worker block running inside a thread assignment.
@@ -70,8 +100,12 @@ class DocumentProcessingService:
 
     async def get_documents(self):
         storage_svc = get_storage_service()
-        documents = await storage_svc.get_documents()
-        return documents
+        try:
+            documents = await storage_svc.get_documents()
+            return documents
+        except Exception as e:
+            logger.error(f"Failed to retrieve documents: {str(e)}")
+            raise DocumentRetrievalError(f"Failed to retrieve documents: {str(e)}")
 
     async def delete_document(self, file_name: str):
         logger.info(f"Initiating the deletion of file: '{file_name}'")

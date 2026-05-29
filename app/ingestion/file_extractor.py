@@ -1,7 +1,8 @@
 import io
 from abc import ABC, abstractmethod
 
-import pdfplumber
+# import pdfplumber
+import pymupdf
 from docx import Document as DocxDocument
 from typing import Type
 
@@ -22,12 +23,12 @@ class IExtractor(ABC):
 class PDFExtractor(IExtractor):
     def extract(self, file_bytes: bytes) -> str:
         try:
-            stream = io.BytesIO(file_bytes)
+            # stream = io.BytesIO(file_bytes)
             text_pages = []
 
-            with pdfplumber.open(stream) as pdf:
-                for page in pdf.pages:
-                    page_text = page.extract_text()
+            with pymupdf.open(stream=file_bytes, filetype="pdf") as pdf:
+                for page in pdf:
+                    page_text = page.get_text()
                     if page_text:
                         text_pages.append(page_text)
 
@@ -35,7 +36,7 @@ class PDFExtractor(IExtractor):
 
         except Exception as e:
             raise FileExtractionError(
-                f"Failed parsing PDF stream layout via pdfplumber: {str(e)}"
+                f"Failed parsing PDF stream layout via pymupdf: {str(e)}"
             )
 
 

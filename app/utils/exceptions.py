@@ -29,3 +29,6 @@ class RAGServiceException(Exception):
 
 class FileCannotBeDeleted(Exception):
     pass
+
+class DocumentRetrievalError(Exception):
+    pass

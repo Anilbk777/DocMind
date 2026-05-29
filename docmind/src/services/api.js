@@ -5,9 +5,14 @@ export async function uploadDocument(file) {
   fd.append('file', file);
   const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: fd });
   const data = await res.json();
-  // if (!res.ok) throw new Error(data.detail || 'Upload failed');
   if (!res.ok) throw new Error('Upload failed');
   return data;
+}
+
+export async function getJobStatus(jobId) {
+  const res = await fetch(`${API_BASE}/jobs/${encodeURIComponent(jobId)}`);
+  if (!res.ok) throw new Error('Failed to fetch job status');
+  return await res.json();
 }
 
 export async function getDocuments() {
