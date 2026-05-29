@@ -8,9 +8,13 @@ from app.utils.logging import LoggerFactory
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routers.upload_router import router as upload_router
 from app.api.routers.chat_router import router as chat_router
+import os
 
 load_dotenv()
 logger = LoggerFactory.get_logger(__name__)
+
+_cpu_cores: int = os.cpu_count() or 1
+MAX_INGESTION_WORKERS: int = min(_cpu_cores * 2, 10)
 
 
 @asynccontextmanager
@@ -18,7 +22,7 @@ async def app_lifespan(app: FastAPI):
     # Create a shared ThreadPoolExecutor for heavy file parsing tasks
     logger.info("Initializing application ThreadPoolExecutor...")
     app.state.thread_executor = ThreadPoolExecutor(
-        max_workers=5, thread_name_prefix="ingestion_worker"
+        max_workers=MAX_INGESTION_WORKERS, thread_name_prefix="ingestion_worker"
     )
     logger.info("Server is fully warmed up and ready to accept requests.")
     yield

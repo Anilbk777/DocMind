@@ -29,8 +29,8 @@ export default function App() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  async function handleFile(file) {
-    await upload(file);
+  async function handleFiles(files) {
+    await upload(files);
     setSidebarOpen(false);
   }
 
@@ -43,9 +43,7 @@ export default function App() {
     <>
       <ProcessingOverlay
         visible={overlayState.visible}
-        filename={overlayState.filename}
-        status={overlayState.status}
-        isError={overlayState.isError}
+        jobs={overlayState.jobs}
       />
 
       {/* Mobile backdrop */}
@@ -56,7 +54,7 @@ export default function App() {
       <div className={styles.shell}>
         <Sidebar
           docs={docs}
-          onFile={handleFile}
+          onFiles={handleFiles}
           onDelete={handleDelete}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}

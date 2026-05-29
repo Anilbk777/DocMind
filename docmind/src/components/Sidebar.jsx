@@ -3,7 +3,7 @@ import UploadZone from './UploadZone';
 import DocumentList from './DocumentList';
 import styles from './Sidebar.module.css';
 
-export default function Sidebar({ docs, onFile, onDelete, isOpen, onClose }) {
+export default function Sidebar({ docs, onFiles, onDelete, isOpen, onClose }) {
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
       <div className={styles.header}>
@@ -29,7 +29,7 @@ export default function Sidebar({ docs, onFile, onDelete, isOpen, onClose }) {
           <p className={styles.sectionHint}>Upload study materials into your vector memory store.</p>
         </div>
 
-        <UploadZone onFile={onFile} />
+        <UploadZone onFiles={onFiles} />
         <DocumentList docs={docs} onDelete={onDelete} />
       </div>
 

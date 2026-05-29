@@ -17,8 +17,8 @@ from app.api.dependencies import get_document_processing_service
 
 logger = LoggerFactory.get_logger(__name__)
 
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+MAX_FILES_PER_BATCH = 5
 
 router = APIRouter(prefix="/api/v1", tags=["RAG API"])
 
@@ -26,38 +26,47 @@ router = APIRouter(prefix="/api/v1", tags=["RAG API"])
 @router.post("/upload", status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
     doc_service: DocumentProcessingService = Depends(get_document_processing_service),
 ):
-    logger.info(f"File received: {file.filename}")
-
-    if file.size > MAX_FILE_SIZE:
-        logger.error(f"File too large: {file.filename}")
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {MAX_FILE_SIZE / (1024 * 1024)} MB.",
+    logger.info("Files received")
+    accepted_files = files[:MAX_FILES_PER_BATCH]
+    discarded_count = len(files) - len(accepted_files)
+    if discarded_count > 0:
+        logger.warning(
+            f"Received {len(files)} files — processing first {MAX_FILES_PER_BATCH}, "
+            f"discarding {discarded_count}."
         )
 
-    file_bytes = await file.read()
+    jobs = []
+    for file in accepted_files:
+        if file.size > MAX_FILE_SIZE:
+            logger.error(f"File too large: {file.filename}")
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"File too large. Maximum size is {MAX_FILE_SIZE / (1024 * 1024)} MB.",
+            )
 
-    job_id = str(uuid.uuid4())
-    job_tracker.create_job(job_id, file.filename)
+        file_bytes = await file.read()
 
-    logger.info(
-        f"Queueing document '{file.filename}' for background processing with job_id {job_id}."
-    )
+        job_id = str(uuid.uuid4())
+        job_tracker.create_job(job_id, file.filename)
+        jobs.append((job_id, file.filename, file_bytes))
+
+    logger.info(f"Queuing {len(jobs)} file(s) for background processing.")
     background_tasks.add_task(
-        doc_service.process_and_store_document_background,
-        job_id,
-        file.filename,
-        file_bytes,
+        doc_service.process_batch_background,
+        jobs,
     )
 
     return {
         "status": "Accepted",
-        "job_id": job_id,
-        "filename": file.filename,
-        "message": "Document accepted and is being processed in the background.",
+        "message": f"{len(jobs)} document(s) accepted and queued for processing.",
+        "accepted": len(jobs),
+        "discarded": discarded_count,
+        "jobs": [
+            {"job_id": job_id, "filename": filename} for job_id, filename, _ in jobs
+        ],
     }
 
 

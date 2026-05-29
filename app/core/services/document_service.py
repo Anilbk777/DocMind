@@ -63,33 +63,46 @@ class DocumentProcessingService:
             )
             raise
 
-    async def process_and_store_document_background(self, job_id: str, file_name: str, file_bytes: bytes) -> None:
+    async def process_and_store_document_background(
+        self, job_id: str, file_name: str, file_bytes: bytes
+    ) -> None:
         """
         Orchestrates the atomic ingestion and storage of a document.
         Designed to be run as a FastAPI BackgroundTask.
         """
         from app.core.services.job_tracker import job_tracker
+
         logger.info(f"Starting background processing for job {job_id} ('{file_name}')")
         try:
             # Step 1: Ingest into Vector Store (heavy CPU task on ThreadPool)
-            chunks_created = await self.process_document_background(file_name, file_bytes)
-            logger.info(f"Successfully processed {chunks_created} chunks for '{file_name}'")
+            chunks_created = await self.process_document_background(
+                file_name, file_bytes
+            )
+            logger.info(
+                f"Successfully processed {chunks_created} chunks for '{file_name}'"
+            )
 
             # Step 2: Save to Local Storage
             storage_svc = get_storage_service()
             try:
-                saved_path = await storage_svc.upload_file_bytes(file_name, file_bytes, folder="documents")
+                saved_path = await storage_svc.upload_file_bytes(
+                    file_name, file_bytes, folder="documents"
+                )
                 logger.info(f"Successfully saved '{file_name}' to storage.")
                 # Mark job as success
                 job_tracker.update_job_success(job_id, saved_path, chunks_created)
             except Exception as storage_err:
-                logger.error(f"Failed to save '{file_name}' to storage: {storage_err}. Rolling back vector store...")
+                logger.error(
+                    f"Failed to save '{file_name}' to storage: {storage_err}. Rolling back vector store..."
+                )
                 # Rollback vector store insertion since disk storage failed
                 await self.delete_document(file_name)
                 raise storage_err
 
         except Exception as e:
-            logger.error(f"Background processing failed for job {job_id} ('{file_name}'): {str(e)}")
+            logger.error(
+                f"Background processing failed for job {job_id} ('{file_name}'): {str(e)}"
+            )
             job_tracker.update_job_error(job_id, str(e))
 
     def _run_blocking_pipeline(self, filename: str, file_bytes: bytes) -> int:
@@ -97,6 +110,43 @@ class DocumentProcessingService:
         Synchronous proxy execution worker block running inside a thread assignment.
         """
         return self._ingestion_pipeline.process_file(filename, file_bytes)
+
+    async def process_batch_background(
+        self, jobs: list[tuple[str, str, bytes]]
+    ) -> None:
+        """
+        Orchestrates the atomic ingestion and storage of a batch of documents.
+        Designed to be run as a FastAPI BackgroundTask.
+        """
+        logger.info(f"Batch processing started for {len(jobs)} file(s).")
+
+        semaphore = asyncio.Semaphore(2)
+
+        async def throttled_worker(job_id, filename, file_bytes):
+            async with semaphore:
+                # This calls your underlying thread-pool offloaded method
+                return await self.process_and_store_document_background(
+                    job_id, filename, file_bytes
+                )
+
+        # 1. Build a list of raw coroutines (No create_task needed!)
+        coroutines = [
+            throttled_worker(job_id, filename, file_bytes)
+            for job_id, filename, file_bytes in jobs
+        ]
+
+        # 2. Gather them safely. It automatically converts coroutines to tasks.
+        results = await asyncio.gather(*coroutines, return_exceptions=True)
+
+        # 3. Process results
+        for (job_id, filename, _), result in zip(jobs, results):
+            if isinstance(result, BaseException):
+                logger.error(f"Batch job {job_id} ('{filename}') failed: {result}")
+            else:
+                logger.info(
+                    f"Batch job {job_id} ('{filename}') completed successfully."
+                )
+        logger.info("Batch processing complete.")
 
     async def get_documents(self):
         storage_svc = get_storage_service()
