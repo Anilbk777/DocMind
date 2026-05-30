@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    hello
+
+    <script>
+        // Open the WebSocket connection
+        // Note: ws:// not http:// — this is the WebSocket protocol identifier
+        const socket = new WebSocket("ws://localhost:8000/ws");
+
+        // This fires when the connection is established
+        socket.onopen = () => {
+            console.log("Connected!");
+            socket.send("Hello server");  // send a message
+        };
+
+        // This fires every time the SERVER sends us a message
+        // This is the key — the browser doesn't have to ask, the server just sends
+        socket.onmessage = (event) => {
+            console.log("Server said:", event.data);  // "You said: Hello server"
+        };
+        
+
+        // This fires when the connection closes
+        socket.onclose = () => {
+            console.log("Disconnected");
+        };
+
+        // Handle errors
+        socket.onerror = (error) => {
+            console.error("WebSocket error:", error);
+        };
+    </script>
+</body>
+
+</html>

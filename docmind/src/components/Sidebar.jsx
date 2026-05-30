@@ -1,9 +1,10 @@
 
 import UploadZone from './UploadZone';
 import DocumentList from './DocumentList';
+import ProcessingPanel from './ProcessingPanel';
 import styles from './Sidebar.module.css';
 
-export default function Sidebar({ docs, onFiles, onDelete, isOpen, onClose }) {
+export default function Sidebar({ docs, onFiles, onDelete, isOpen, onClose, processingJobs, onClearJobs }) {
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
       <div className={styles.header}>
@@ -30,6 +31,13 @@ export default function Sidebar({ docs, onFiles, onDelete, isOpen, onClose }) {
         </div>
 
         <UploadZone onFiles={onFiles} />
+
+        {/* Processing panel — shows per-file progress when uploading */}
+        <ProcessingPanel
+          processingJobs={processingJobs}
+          onClear={onClearJobs}
+        />
+
         <DocumentList docs={docs} onDelete={onDelete} />
       </div>
 

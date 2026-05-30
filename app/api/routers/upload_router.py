@@ -6,14 +6,18 @@ from fastapi import (
     status,
     Depends,
     BackgroundTasks,
+    WebSocket,
+    WebSocketDisconnect,
 )
 import uuid
 from app.core.services.job_tracker import job_tracker
+
 from app.core.services.document_service import DocumentProcessingService
 from app.utils.logging import LoggerFactory
 from app.utils.exceptions import FileCannotBeDeleted
 from app.api.schemas import DocumentResponse
 from app.api.dependencies import get_document_processing_service
+from app.core.services.websocket_manager import websocket_manager
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -38,6 +42,7 @@ async def upload_document(
             f"discarding {discarded_count}."
         )
 
+    batch_id = str(uuid.uuid4())
     jobs = []
     for file in accepted_files:
         if file.size > MAX_FILE_SIZE:
@@ -50,17 +55,19 @@ async def upload_document(
         file_bytes = await file.read()
 
         job_id = str(uuid.uuid4())
-        job_tracker.create_job(job_id, file.filename)
+        job_tracker.create_job(job_id, file.filename, batch_id)
         jobs.append((job_id, file.filename, file_bytes))
 
     logger.info(f"Queuing {len(jobs)} file(s) for background processing.")
     background_tasks.add_task(
         doc_service.process_batch_background,
+        batch_id,
         jobs,
     )
 
     return {
         "status": "Accepted",
+        "batch_id": batch_id,
         "message": f"{len(jobs)} document(s) accepted and queued for processing.",
         "accepted": len(jobs),
         "discarded": discarded_count,
@@ -117,18 +124,34 @@ async def delete_file(
         )
 
 
-@router.get("/jobs", status_code=status.HTTP_200_OK)
-async def get_all_jobs():
-    """Returns all background jobs."""
-    return job_tracker.get_all_jobs()
+@router.websocket("/ws/batch/{batch_id}")
+async def batch_status_websocket(batch_id: str, websocket: WebSocket):
 
+    await websocket_manager.connect(batch_id, websocket)
+    batch_jobs = job_tracker.get_batch_jobs(batch_id)
 
-@router.get("/jobs/{job_id}", status_code=status.HTTP_200_OK)
-async def get_job_status(job_id: str):
-    """Returns the status of a specific background job."""
-    job = job_tracker.get_job(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found."
-        )
-    return job
+    if batch_jobs:
+        finished_jobs = [
+            job for job in batch_jobs if job["status"] in ("completed", "failed")
+        ]
+
+        for job in finished_jobs:
+            await websocket.send_json(
+                {
+                    "job_id": job["job_id"],
+                    "filename": job["filename"],
+                    "status": job["status"],
+                    "chunks_created": job.get("chunks_created"),
+                    "error": job.get("error"),
+                }
+            )
+
+        if len(finished_jobs) == len(batch_jobs):
+            websocket_manager.disconnect(batch_id)
+            return
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        websocket_manager.disconnect(batch_id)

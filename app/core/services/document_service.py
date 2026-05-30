@@ -13,6 +13,8 @@ from app.utils.exceptions import (
     DocumentRetrievalError,
 )
 from app.storage.factory_storage import get_storage_service
+from app.core.services.job_tracker import job_tracker
+from app.core.services.websocket_manager import websocket_manager
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -40,7 +42,10 @@ class DocumentProcessingService:
         try:
             # Shift the synchronous execution loop onto the thread pool executor
             total_chunks = await loop.run_in_executor(
-                self._executor, self._run_blocking_pipeline, filename, file_bytes
+                self._executor,
+                self._ingestion_pipeline.process_file,
+                filename,
+                file_bytes,
             )
             logger.info(
                 f"Thread execution complete. Indexed {total_chunks} chunks for '{filename}'"
@@ -62,6 +67,12 @@ class DocumentProcessingService:
                 exc_info=True,
             )
             raise
+
+    # def _run_blocking_pipeline(self, filename: str, file_bytes: bytes) -> int:
+    #     """
+    #     Synchronous proxy execution worker block running inside a thread assignment.
+    #     """
+    #     return self._ingestion_pipeline.process_file(filename, file_bytes)
 
     async def process_and_store_document_background(
         self, job_id: str, file_name: str, file_bytes: bytes
@@ -105,31 +116,56 @@ class DocumentProcessingService:
             )
             job_tracker.update_job_error(job_id, str(e))
 
-    def _run_blocking_pipeline(self, filename: str, file_bytes: bytes) -> int:
-        """
-        Synchronous proxy execution worker block running inside a thread assignment.
-        """
-        return self._ingestion_pipeline.process_file(filename, file_bytes)
-
     async def process_batch_background(
-        self, jobs: list[tuple[str, str, bytes]]
+        self,
+        batch_id: str,
+        jobs: list[tuple[str, str, bytes]],
     ) -> None:
         """
         Orchestrates the atomic ingestion and storage of a batch of documents.
         Designed to be run as a FastAPI BackgroundTask.
         """
         logger.info(f"Batch processing started for {len(jobs)} file(s).")
+        total_jobs = len(jobs)
+        completed_count = 0
 
         semaphore = asyncio.Semaphore(2)
 
         async def throttled_worker(job_id, filename, file_bytes):
+            nonlocal completed_count
             async with semaphore:
                 # This calls your underlying thread-pool offloaded method
-                return await self.process_and_store_document_background(
+                await self.process_and_store_document_background(
                     job_id, filename, file_bytes
                 )
 
-        # 1. Build a list of raw coroutines (No create_task needed!)
+                job = job_tracker.get_job(job_id)
+                completed_count += 1
+                is_last = completed_count == total_jobs
+                if job and job["status"] == "completed":
+                    await websocket_manager.notify(
+                        batch_id,
+                        {
+                            "job_id": job_id,
+                            "filename": filename,
+                            "status": "completed",
+                            "chunks_created": job.get("chunks_created"),
+                        },
+                        close=is_last,
+                    )
+                else:
+                    await websocket_manager.notify(
+                        batch_id,
+                        {
+                            "job_id": job_id,
+                            "filename": filename,
+                            "status": "failed",
+                            "error": job.get("error") if job else "Unknown error",
+                        },
+                        close=is_last,
+                    )
+
+        # 1.list of raw coroutines
         coroutines = [
             throttled_worker(job_id, filename, file_bytes)
             for job_id, filename, file_bytes in jobs

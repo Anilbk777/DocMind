@@ -1,109 +1,121 @@
-import { useState, useCallback } from 'react';
-import { uploadDocument, getJobStatus } from '../services/api';
+import { useState, useCallback, useRef } from 'react';
+import { uploadDocuments, connectBatchWebSocket } from '../services/api';
 
+/**
+ * useUpload — manages multi-file upload with real-time WebSocket progress.
+ *
+ * Job lifecycle:  queued → processing → completed | failed
+ *
+ * @param {Function} onSuccess — called each time a job completes (e.g. to refresh document list)
+ * @returns {{ processingJobs: Array, upload: Function, clearJobs: Function }}
+ */
 export function useUpload(onSuccess) {
-  const [state, setState] = useState({ visible: false, jobs: [] });
+  const [processingJobs, setProcessingJobs] = useState([]);
+  const wsRef = useRef(null);
 
   const upload = useCallback(async (files) => {
-    // Initialize state with all files
+    // 1. Build initial job list — all start as "queued"
     const initialJobs = files.map(file => ({
+      job_id: null,
       filename: file.name,
-      status: 'Uploading...',
-      isError: false,
-      jobId: null,
-      completed: false
+      status: 'queued',
+      chunks_created: null,
+      error: null,
     }));
-    
-    setState({ visible: true, jobs: initialJobs });
 
-    // Step 1: Upload all files concurrently to get job IDs
-    const uploadPromises = files.map(async (file, index) => {
-      try {
-        const uploadRes = await uploadDocument(file);
-        return { index, jobId: uploadRes.job_id, status: 'Processing in background...', isError: false };
-      } catch (err) {
-        return { index, jobId: null, status: `Error: ${err.message}`, isError: true, completed: true };
+    setProcessingJobs(initialJobs);
+
+    // 2. Upload all files in a single request
+    let batch;
+    try {
+      batch = await uploadDocuments(files);
+    } catch (err) {
+      // Entire upload failed — mark all as failed
+      setProcessingJobs(prev =>
+        prev.map(job => ({
+          ...job,
+          status: 'failed',
+          error: err.message || 'Upload failed',
+        }))
+      );
+      return;
+    }
+
+    // 3. Map batch response to jobs — update to "processing" with job_ids
+    const { batch_id, jobs: serverJobs } = batch;
+
+    setProcessingJobs(prev =>
+      prev.map((job, idx) => {
+        const serverJob = serverJobs[idx];
+        if (serverJob) {
+          return {
+            ...job,
+            job_id: serverJob.job_id,
+            status: 'processing',
+          };
+        }
+        // File was discarded by backend (exceeded MAX_FILES_PER_BATCH)
+        return {
+          ...job,
+          status: 'failed',
+          error: 'Discarded — too many files in batch',
+        };
+      })
+    );
+
+    // 4. Connect WebSocket for real-time progress
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+
+    const ws = connectBatchWebSocket(
+      batch_id,
+      // onMessage — fired once per finished job
+      (data) => {
+        const { job_id, status, chunks_created, error } = data;
+
+        setProcessingJobs(prev =>
+          prev.map(job => {
+            if (job.job_id !== job_id) return job;
+            return {
+              ...job,
+              status,
+              chunks_created: chunks_created ?? null,
+              error: error ?? null,
+            };
+          })
+        );
+
+        // Refresh document list when a job completes
+        if (status === 'completed') {
+          onSuccess?.();
+        }
+      },
+      // onClose — WebSocket disconnected (all jobs done or error)
+      () => {
+        // Safety net: any job still "processing" → mark as failed
+        setProcessingJobs(prev =>
+          prev.map(job =>
+            job.status === 'processing'
+              ? { ...job, status: 'failed', error: 'Connection lost' }
+              : job
+          )
+        );
+        wsRef.current = null;
       }
-    });
+    );
 
-    const uploadResults = await Promise.all(uploadPromises);
-
-    // Update state with job IDs
-    setState(s => {
-      const newJobs = [...s.jobs];
-      uploadResults.forEach(res => {
-        newJobs[res.index] = { ...newJobs[res.index], ...res };
-      });
-      return { ...s, jobs: newJobs };
-    });
-
-    // Close the modal shortly after uploads are queued, if we want them to go to background
-    await delay(1500);
-    setState(s => ({ ...s, visible: false }));
-
-    // Step 2: Polling loop
-    let activeJobIds = uploadResults.filter(r => r.jobId && !r.isError).map(r => r.jobId);
-    
-    if (activeJobIds.length === 0) return; // All failed during upload
-
-    const poll = async () => {
-      try {
-        const statuses = await Promise.all(activeJobIds.map(getJobStatus));
-        let anyChanges = false;
-        let allDone = true;
-
-        const statusMap = {};
-        statuses.forEach(j => { statusMap[j.job_id] = j; });
-
-        setState(s => {
-          const newJobs = s.jobs.map(job => {
-            if (!job.jobId || job.completed) return job;
-            const updated = statusMap[job.jobId];
-            if (!updated) return job; // Should not happen
-
-            if (updated.status === 'completed') {
-              anyChanges = true;
-              return { ...job, status: 'Ingestion complete!', completed: true };
-            } else if (updated.status === 'failed') {
-              anyChanges = true;
-              return { ...job, status: `Background Error: ${updated.error}`, isError: true, completed: true };
-            }
-            allDone = false;
-            return job;
-          });
-          return anyChanges ? { ...s, jobs: newJobs } : s;
-        });
-
-        // Check if any failed or succeeded, to re-show modal briefly if needed?
-        // Let's just rely on the silent refresh for success, and maybe re-show on error.
-        const newlyFailed = statuses.find(s => s.status === 'failed');
-        if (newlyFailed) {
-            setState(s => ({ ...s, visible: true }));
-            await delay(4000);
-            setState(s => ({ ...s, visible: false }));
-        }
-
-        if (statuses.some(s => s.status === 'completed')) {
-             onSuccess?.(); // Silently refresh the list
-        }
-
-        activeJobIds = statuses.filter(s => s.status !== 'completed' && s.status !== 'failed').map(s => s.job_id);
-
-        if (activeJobIds.length > 0) {
-          setTimeout(poll, 2000);
-        }
-
-      } catch (err) {
-        console.error("Polling error", err);
-        setTimeout(poll, 2000); // Retry polling
-      }
-    };
-
-    setTimeout(poll, 2000);
-
+    wsRef.current = ws;
   }, [onSuccess]);
 
-  return { overlayState: state, upload };
-}
+  // Allow the user to dismiss the processing panel after all jobs are terminal
+  const clearJobs = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setProcessingJobs([]);
+  }, []);
 
-const delay = ms => new Promise(r => setTimeout(r, ms));
+  return { processingJobs, upload, clearJobs };
+}

@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import ChatInput from './components/ChatInput';
-import ProcessingOverlay from './components/ProcessingOverlay';
 import { useDocuments } from './hooks/useDocuments';
 import { useChat } from './hooks/useChat';
 import { useUpload } from './hooks/useUpload';
@@ -12,7 +11,7 @@ import styles from './App.module.css';
 export default function App() {
   const { docs, refresh, remove } = useDocuments();
   const { messages, send, streaming } = useChat();
-  const { overlayState, upload } = useUpload(refresh);
+  const { processingJobs, upload, clearJobs } = useUpload(refresh);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -41,11 +40,6 @@ export default function App() {
 
   return (
     <>
-      <ProcessingOverlay
-        visible={overlayState.visible}
-        jobs={overlayState.jobs}
-      />
-
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div className={styles.backdrop} onClick={handleBackdropClick} />
@@ -58,6 +52,8 @@ export default function App() {
           onDelete={handleDelete}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          processingJobs={processingJobs}
+          onClearJobs={clearJobs}
         />
 
         <div className={styles.chatCol}>

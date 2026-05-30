@@ -2,8 +2,9 @@ import { useState, useCallback } from 'react';
 import { getDocuments, deleteDocument } from '../services/api';
 
 export function useDocuments() {
-  const [docs,    setDocs]    = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [docs,        setDocs]        = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
@@ -11,6 +12,8 @@ export function useDocuments() {
       setDocs(list);
     } catch {
       // silently ignore if endpoint isn't ready yet
+    } finally {
+      setInitialLoad(false);
     }
   }, []);
 
@@ -28,5 +31,5 @@ export function useDocuments() {
     }
   }, []);
 
-  return { docs, refresh, remove, loading };
+  return { docs, refresh, remove, loading, initialLoad };
 }

@@ -1,0 +1,219 @@
+/* ── Processing Panel (embedded in sidebar) ── */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--blush);
+  border-radius: 12px;
+  background: var(--white);
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(223, 127, 131, 0.08);
+  animation: panelSlideIn 0.3s ease-out;
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Header ── */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--blush);
+  background: var(--cream);
+}
+
+.headerIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  animation: spin 1.2s linear infinite;
+}
+
+.headerIconDone {
+  animation: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.headerTitle {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--charcoal);
+}
+
+.headerCount {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--rose);
+  background: rgba(223, 127, 131, 0.12);
+  padding: 2px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.dismissBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--blush);
+  background: var(--white);
+  color: var(--charcoal);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.45;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.dismissBtn:hover {
+  opacity: 1;
+  background: var(--blush);
+}
+
+.dismissBtn:disabled {
+  opacity: 0.15;
+  cursor: not-allowed;
+}
+
+/* ── Job Rows ── */
+
+.jobList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.jobRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(245, 228, 218, 0.5);
+  animation: rowFadeIn 0.25s ease-out;
+  transition: background 0.2s, opacity 0.3s;
+}
+
+.jobRow:last-child {
+  border-bottom: none;
+}
+
+.jobRow:hover {
+  background: rgba(245, 228, 218, 0.25);
+}
+
+@keyframes rowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── Job Status Icons ── */
+
+.jobIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconQueued {
+  background: rgba(70, 70, 70, 0.06);
+  color: var(--charcoal);
+  opacity: 0.4;
+}
+
+.iconProcessing {
+  background: rgba(223, 127, 131, 0.1);
+  color: var(--rose);
+}
+
+.iconProcessing svg {
+  animation: spin 1s linear infinite;
+}
+
+.iconCompleted {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.iconFailed {
+  background: rgba(248, 116, 114, 0.1);
+  color: var(--coral);
+}
+
+/* ── Job Info ── */
+
+.jobInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.jobFilename {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--charcoal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobStatus {
+  font-size: 10px;
+  color: var(--charcoal);
+  opacity: 0.5;
+  line-height: 1.3;
+}
+
+.jobStatusError {
+  color: var(--coral);
+  opacity: 1;
+  font-weight: 500;
+}
+
+/* ── Chunk Badge ── */
+
+.chunkBadge {
+  font-size: 9px;
+  font-weight: 600;
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.08);
+  padding: 2px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
