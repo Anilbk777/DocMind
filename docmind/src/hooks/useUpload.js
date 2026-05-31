@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { uploadDocuments, connectBatchWebSocket } from "../services/api";
 
@@ -9,7 +8,8 @@ export function useUpload(onSuccess) {
 
   const upload = useCallback(
     async (files) => {
-      if (isUploading || processingJobs.length > 0) {
+      // Only check isUploading, not processingJobs.length
+      if (isUploading) {
         alert(
           "Please wait for current uploads to complete before uploading new documents.",
         );
@@ -114,7 +114,7 @@ export function useUpload(onSuccess) {
 
       wsRef.current = ws;
     },
-    [isUploading, processingJobs.length, onSuccess],
+    [isUploading, onSuccess],
   );
 
   const clearJobs = useCallback(() => {
