@@ -56,6 +56,14 @@
   flex-shrink: 0;
   animation: pulse-peach 2s ease-in-out infinite;
 }
+/* ── Sticky Processing Panel Container ── */
+.processingPanelContainer {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--white);
+  padding-bottom: 4px;
+}
 @keyframes pulse-peach {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: .6; transform: scale(.85); }

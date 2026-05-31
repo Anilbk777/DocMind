@@ -1,12 +1,19 @@
+import UploadZone from "./UploadZone";
+import DocumentList from "./DocumentList";
+import ProcessingPanel from "./ProcessingPanel";
+import styles from "./Sidebar.module.css";
 
-import UploadZone from './UploadZone';
-import DocumentList from './DocumentList';
-import ProcessingPanel from './ProcessingPanel';
-import styles from './Sidebar.module.css';
-
-export default function Sidebar({ docs, onFiles, onDelete, isOpen, onClose, processingJobs, onClearJobs }) {
+export default function Sidebar({
+  docs,
+  onFiles,
+  onDelete,
+  isOpen,
+  onClose,
+  processingJobs,
+  onClearJobs,
+}) {
   return (
-    <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
+    <aside className={`${styles.sidebar} ${isOpen ? styles.open : ""}`}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <span className={styles.pulse} />
@@ -16,9 +23,24 @@ export default function Sidebar({ docs, onFiles, onDelete, isOpen, onClose, proc
         </div>
 
         {/* Close button — only visible on mobile */}
-        <button className={styles.closeBtn} onClick={onClose} aria-label="Close sidebar">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+        <button
+          className={styles.closeBtn}
+          onClick={onClose}
+          aria-label="Close sidebar"
+        >
+          <svg
+            width="14"
+            height="14"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -27,23 +49,28 @@ export default function Sidebar({ docs, onFiles, onDelete, isOpen, onClose, proc
         <div className={styles.section}>
           <p className={styles.sectionLabel}>Knowledge Base</p>
           <div className={styles.divider} />
-          <p className={styles.sectionHint}>Upload study materials into your vector memory store.</p>
+          <p className={styles.sectionHint}>
+            Upload study materials into your vector memory store.
+          </p>
         </div>
 
         <UploadZone onFiles={onFiles} />
 
-        {/* Processing panel — shows per-file progress when uploading */}
-        <ProcessingPanel
-          processingJobs={processingJobs}
-          onClear={onClearJobs}
-        />
+        {/* Processing panel — sticky so it stays visible during scrolling */}
+        <div className={styles.processingPanelContainer}>
+          <ProcessingPanel
+            processingJobs={processingJobs}
+            onClear={onClearJobs}
+          />
+        </div>
 
         <DocumentList docs={docs} onDelete={onDelete} />
       </div>
 
       <div className={styles.footer}>
         <p className={styles.tip}>
-          <span>Tip:</span> Searches your files first, then falls back to general knowledge.
+          <span>Tip:</span> Searches your files first, then falls back to
+          general knowledge.
         </p>
       </div>
     </aside>
