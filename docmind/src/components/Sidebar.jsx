@@ -11,6 +11,7 @@ export default function Sidebar({
   onClose,
   processingJobs,
   onClearJobs,
+  isUploading,
 }) {
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.open : ""}`}>
@@ -54,7 +55,7 @@ export default function Sidebar({
           </p>
         </div>
 
-        <UploadZone onFiles={onFiles} />
+        <UploadZone onFiles={onFiles} isUploading={isUploading} />
 
         {/* Processing panel — sticky so it stays visible during scrolling */}
         <div className={styles.processingPanelContainer}>
