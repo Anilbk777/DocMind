@@ -23,7 +23,7 @@ class RAGIngestionPipeline:
         self._splitter: TextSplitter = text_chunker
         self._vector_store: Chroma = VectorStore.get_vector_store()
 
-    def process_file(self, filename: str, file_bytes: bytes) -> int:
+    def process_file(self, filename: str, file_bytes: bytes, user_id: uuid.UUID) -> int:
         """
         Full ingestion pipeline for a single file.
         Returns:
@@ -35,7 +35,7 @@ class RAGIngestionPipeline:
 
         # Phase 2: Chunk
         logger.info("[Phase 2] Chunking '%s'…", filename)
-        chunks = self._chunk(filename, raw_text)
+        chunks = self._chunk(filename, raw_text, user_id)
         logger.info("Segmented '%s' into %d fragments.", filename, len(chunks))
 
         # Phase 3: Embed
@@ -83,11 +83,13 @@ class RAGIngestionPipeline:
 
         return raw_text
 
-    def _chunk(self, filename: str, raw_text: str) -> list[Document]:
+    def _chunk(
+        self, filename: str, raw_text: str, user_id: uuid.UUID
+    ) -> list[Document]:
         """Split raw text into overlapping LangChain Document chunks."""
         source_doc = Document(
             page_content=raw_text,
-            metadata={"source": filename},
+            metadata={"source": filename, "user_id": str(user_id)},
         )
         return self._splitter.split_documents([source_doc])
 

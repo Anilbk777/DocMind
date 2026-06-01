@@ -1,3 +1,4 @@
+from app.api.dependencies import CurrentUser
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.schemas import ChatRequest
@@ -25,12 +26,14 @@ router = APIRouter(prefix="/api/v1", tags=["RAG API"])
 
 
 @router.post("/chat", status_code=status.HTTP_200_OK)
-async def chat(payload: ChatRequest):
+async def chat(payload: ChatRequest, current_user: CurrentUser):
     logger.info(f"Chat streaming query received: {payload.query[:30]}...")
 
     try:
         rag_service = _build_rag_service(payload)
-        stream = rag_service.answer_question_stream(question=payload.query)
+        stream = rag_service.answer_question_stream(
+            question=payload.query, user_id=current_user.id
+        )
     except RAGServiceException as e:
         logger.warning(f"RAG service init error: {e}")
         raise HTTPException(

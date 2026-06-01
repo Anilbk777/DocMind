@@ -8,6 +8,7 @@ from app.core.prompt_builder import GENERAL_PROMPT_TEMPLATE, RAG_PROMPT_TEMPLATE
 from app.services.retrieval_service import RetrievalService
 from app.utils.exceptions import RAGServiceException
 from app.utils.logging import LoggerFactory
+import uuid
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -54,7 +55,9 @@ class RagOrchestrationService:
                 else getattr(chunk, "content", str(chunk))
             )
 
-    async def answer_question_stream(self, question: str) -> AsyncGenerator[str, None]:
+    async def answer_question_stream(
+        self, question: str, user_id: uuid.UUID
+    ) -> AsyncGenerator[str, None]:
         """
         Public async generator. Yields text chunks suitable for StreamingResponse.
 
@@ -75,7 +78,7 @@ class RagOrchestrationService:
                 context,
                 is_internal_data,
                 sources,
-            ) = await self.retrieval_service.get_context(question)
+            ) = await self.retrieval_service.get_context(question, user_id)
         except Exception as e:
             logger.error("Retrieval stage failed.", exc_info=True)
             raise RAGServiceException(

@@ -1,7 +1,6 @@
 import asyncio
 import aiofiles
 from pathlib import Path
-from fastapi import UploadFile
 from app.storage.base_storage import BaseStorageService
 from app.utils.logging import LoggerFactory
 
@@ -10,30 +9,12 @@ logger = LoggerFactory.get_logger(__name__)
 
 class LocalStorageService(BaseStorageService):
     def __init__(self, base_dir: str = "media"):
-        self.base_dir = Path(base_dir)
+        self.base_dir = Path(base_dir).resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
-    async def upload_file(self, file: UploadFile, folder: str) -> str:
-        target_dir = self.base_dir / folder
-        target_dir.mkdir(parents=True, exist_ok=True)
-
-        file_path = target_dir / file.filename
-
-        try:
-            async with aiofiles.open(file_path, "wb") as f:
-                while chunk := await file.read(1024 * 1024):
-                    await f.write(chunk)
-
-            logger.info(f"File successfully stored locally at: {file_path}")
-            return str(file_path)
-
-        except Exception as e:
-            logger.error(f"Local file write failure: {str(e)}")
-            raise e
-        finally:
-            await file.seek(0)
-
-    async def upload_file_bytes(self, file_name: str, file_bytes: bytes, folder: str) -> str:
+    async def upload_file_bytes(
+        self, file_name: str, file_bytes: bytes, folder: str
+    ) -> str:
         target_dir = self.base_dir / folder
         target_dir.mkdir(parents=True, exist_ok=True)
 
@@ -74,17 +55,33 @@ class LocalStorageService(BaseStorageService):
             logger.error(f"Failed to get documents: {str(e)}")
             return []
 
-    async def delete_file(self, file_name: str) -> bool:
+    async def delete_file(self, file_path: str) -> bool:
         try:
-            target_path = (self.base_dir / "documents" / file_name).resolve()
+            # 1. Resolve to an absolute path to unpack any symlinks or '../' hacks
+            target_path = Path(file_path).resolve()
+            logger.info(
+                f"Requested local file deletion for resolved path: {target_path}"
+            )
+
+            # 2. Security Boundary Check: Ensure the target path is strictly inside the base directory
+            if self.base_dir not in target_path.parents:
+                logger.error(
+                    f"Security Alert! Path traversal attempt blocked. "
+                    f"Target path '{target_path}' is outside root storage '{self.base_dir}'."
+                )
+                return False
+
+            # 3. Check physical existence and safely unlink inside a worker thread
             if target_path.exists() and target_path.is_file():
                 await asyncio.to_thread(target_path.unlink)
-
-                logger.info(f"Deleted local file: {file_name}")
+                logger.info(f"Successfully deleted local file: {target_path}")
                 return True
 
-            logger.warning(f"File not found: {file_name}")
+            logger.warning(
+                f"File deletion skipped: File not found at path '{target_path}'."
+            )
             return False
+
         except Exception as e:
-            logger.error(f"Failed to delete local file {file_name}: {str(e)} ")
+            logger.error(f"Failed to delete local file '{file_path}': {str(e)}")
             return False

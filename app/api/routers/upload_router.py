@@ -17,7 +17,7 @@ from app.api.schemas import UserDocumentResponse
 from app.services.document_service import DocumentProcessingService
 from app.services.job_tracker import job_tracker
 from app.services.websocket_manager import websocket_manager
-from app.utils.exceptions import FileCannotBeDeleted
+from app.utils.exceptions import FileCannotBeDeleted, DocumentRetrievalError
 from app.utils.logging import LoggerFactory
 from app.api.dependencies import CurrentUser
 
@@ -118,12 +118,21 @@ async def delete_file(
     logger.info(f"API request incoming to drop document resource: '{file_name}'")
 
     try:
-        result = await doc_service.delete_document(file_name=file_name, user_id=current_user.id)
+        result = await doc_service.delete_document(
+            file_name=file_name, user_id=current_user.id
+        )
         return result
-    except FileCannotBeDeleted:
+    except FileCannotBeDeleted as e:
+        logger.error(f"Error deleting file: {e}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Resource not found",
+            detail=str(e),
+        )
+    except DocumentRetrievalError as e:
+        logger.error(f"Error deleting file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
         )
     except Exception:
         logger.error("An error occurred while deleting the file")
