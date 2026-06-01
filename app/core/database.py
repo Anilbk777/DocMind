@@ -8,7 +8,7 @@ load_dotenv()
 database_url = os.getenv("DATABASE_URL")
 engine = create_async_engine(
     database_url,
-    echo=True,
+    echo=False,
     pool_size=10,
     pool_timeout=20,
     pool_pre_ping=True,

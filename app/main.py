@@ -8,7 +8,7 @@ from app.utils.logging import LoggerFactory
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routers.upload_router import router as upload_router
 from app.api.routers.chat_router import router as chat_router
-
+from app.api.routers.auth_router import router as auth_router
 from app.core.models import UserModel, ChatSessionModel, ChatMessageModel 
 from app.core.database import Base, engine
 import os
@@ -41,6 +41,7 @@ async def app_lifespan(app: FastAPI):
 app = FastAPI(title="Local RAG Development Server", lifespan=app_lifespan)
 app.include_router(upload_router)
 app.include_router(chat_router)
+app.include_router(auth_router)
 
 app.add_middleware(
     CORSMiddleware,

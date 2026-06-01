@@ -1,6 +1,8 @@
 import re
-from pydantic import BaseModel, Field, EmailStr, field_validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 from app.core.llm_strategies import LLMProvider
+from datetime import datetime
+import uuid
 
 
 class ChatRequest(BaseModel):
@@ -81,6 +83,14 @@ class UserLoginRequest(BaseModel):
         return value.strip() if isinstance(value, str) else value
 
 
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    username: str
+    email: EmailStr
+    created_at: datetime
+
+
 class Token(BaseModel):
-    access_token:str
-    token_type:str
+    access_token: str
+    token_type: str
