@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.api.schemas import ChatRequest
 from fastapi.responses import StreamingResponse
-from app.core.services.rag_service import RagOrchestrationService
+from app.services.rag_service import RagOrchestrationService
 from app.utils.exceptions import RAGServiceException
-from app.core.services.retrieval_service import RetrievalService
+from app.services.retrieval_service import RetrievalService
 from app.utils.logging import LoggerFactory
 
 logger = LoggerFactory.get_logger(__name__)

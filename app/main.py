@@ -8,6 +8,9 @@ from app.utils.logging import LoggerFactory
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routers.upload_router import router as upload_router
 from app.api.routers.chat_router import router as chat_router
+
+from app.core.models import UserModel, ChatSessionModel, ChatMessageModel 
+from app.core.database import Base, engine
 import os
 
 load_dotenv()
@@ -19,7 +22,10 @@ MAX_INGESTION_WORKERS: int = min(_cpu_cores * 2, 10)
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
-    # Create a shared ThreadPoolExecutor for heavy file parsing tasks
+    logger.info("Creating database tables if not exists...")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     logger.info("Initializing application ThreadPoolExecutor...")
     app.state.thread_executor = ThreadPoolExecutor(
         max_workers=MAX_INGESTION_WORKERS, thread_name_prefix="ingestion_worker"
@@ -28,6 +34,8 @@ async def app_lifespan(app: FastAPI):
     yield
     logger.info("Shutting down worker thread pool safely...")
     app.state.thread_executor.shutdown(wait=True)
+    await engine.dispose()
+    logger.info("Database connection closed.")
 
 
 app = FastAPI(title="Local RAG Development Server", lifespan=app_lifespan)

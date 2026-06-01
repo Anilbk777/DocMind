@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import MagicMock
 from concurrent.futures import ThreadPoolExecutor
-from app.core.services.document_service import DocumentProcessingService
+from app.services.document_service import DocumentProcessingService
 from app.utils.exceptions import UnsupportedFileTypeError
 
 @pytest.mark.asyncio

@@ -2,19 +2,20 @@ import asyncio
 
 # from langchain_chroma import Chroma
 from concurrent.futures import ThreadPoolExecutor
-from app.utils.logging import LoggerFactory
-from app.ingestion.rag_components import VectorStore
+
+from app.services.job_tracker import job_tracker
+from app.services.websocket_manager import websocket_manager
 from app.ingestion.ingestion_pipeline import RAGIngestionPipeline
+from app.ingestion.rag_components import VectorStore
+from app.storage.factory_storage import get_storage_service
 from app.utils.exceptions import (
+    DocumentRetrievalError,
+    FileCannotBeDeleted,
     FileExtractionError,
     UnsupportedFileTypeError,
     VectorStoreError,
-    FileCannotBeDeleted,
-    DocumentRetrievalError,
 )
-from app.storage.factory_storage import get_storage_service
-from app.core.services.job_tracker import job_tracker
-from app.core.services.websocket_manager import websocket_manager
+from app.utils.logging import LoggerFactory
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -81,7 +82,6 @@ class DocumentProcessingService:
         Orchestrates the atomic ingestion and storage of a document.
         Designed to be run as a FastAPI BackgroundTask.
         """
-        from app.core.services.job_tracker import job_tracker
 
         logger.info(f"Starting background processing for job {job_id} ('{file_name}')")
         try:

@@ -5,7 +5,7 @@ from langchain_core.prompts import BasePromptTemplate
 
 from app.core.llm_strategies import LLMProvider
 from app.core.prompt_builder import GENERAL_PROMPT_TEMPLATE, RAG_PROMPT_TEMPLATE
-from app.core.services.retrieval_service import RetrievalService
+from app.services.retrieval_service import RetrievalService
 from app.utils.exceptions import RAGServiceException
 from app.utils.logging import LoggerFactory
 

@@ -1,23 +1,24 @@
+import uuid
+
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
+    Depends,
     File,
     HTTPException,
     UploadFile,
-    status,
-    Depends,
-    BackgroundTasks,
     WebSocket,
     WebSocketDisconnect,
+    status,
 )
-import uuid
-from app.core.services.job_tracker import job_tracker
 
-from app.core.services.document_service import DocumentProcessingService
-from app.utils.logging import LoggerFactory
-from app.utils.exceptions import FileCannotBeDeleted
-from app.api.schemas import DocumentResponse
 from app.api.dependencies import get_document_processing_service
-from app.core.services.websocket_manager import websocket_manager
+from app.api.schemas import DocumentResponse
+from app.services.document_service import DocumentProcessingService
+from app.services.job_tracker import job_tracker
+from app.services.websocket_manager import websocket_manager
+from app.utils.exceptions import FileCannotBeDeleted
+from app.utils.logging import LoggerFactory
 
 logger = LoggerFactory.get_logger(__name__)
 

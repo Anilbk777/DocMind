@@ -1,10 +1,11 @@
 # pipeline_service.py
+import uuid
+
+import numpy as np
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import TextSplitter
 
-import numpy as np
-import uuid
 from app.ingestion.file_extractor import EXTRACTOR_REGISTRY
 from app.ingestion.rag_components import VectorStore, text_chunker
 from app.utils.exceptions import (
@@ -13,7 +14,6 @@ from app.utils.exceptions import (
     VectorStoreError,
 )
 from app.utils.logging import LoggerFactory
-import time
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -29,24 +29,19 @@ class RAGIngestionPipeline:
         Returns:
             Number of chunks written to the vector store.
         """
-        t_start = time.perf_counter()
-
         # Phase 1: Extract
         logger.info("[Phase 1] Extracting text content streams from: %s", filename)
         raw_text = self._extract(filename, file_bytes)
-        t_extract = time.perf_counter()
 
         # Phase 2: Chunk
         logger.info("[Phase 2] Chunking '%s'…", filename)
         chunks = self._chunk(filename, raw_text)
         logger.info("Segmented '%s' into %d fragments.", filename, len(chunks))
-        t_chunk = time.perf_counter()
 
         # Phase 3: Embed
         logger.info("[Phase 3] Computing embeddings for '%s'…", filename)
         texts, metadatas, ids = self._prepare_vectors(chunks)
         embeddings = self._vector_store._embedding_function.embed_documents(texts)
-        t_embed = time.perf_counter()
 
         # Phase 4: Store
         logger.info(
@@ -54,24 +49,12 @@ class RAGIngestionPipeline:
             filename,
         )
         self._store(texts, embeddings, metadatas, ids, filename)
-        t_store = time.perf_counter()
 
         # Timing report
         logger.info(
             "Successfully integrated embedded arrays for '%s' into storage.",
             filename,
         )
-        logger.info(
-            "[%s] extract=%.2fs | chunk=%.2fs | embed_only=%.2fs | "
-            "store_only=%.2fs | total=%.2fs",
-            filename,
-            t_extract - t_start,
-            t_chunk - t_extract,
-            t_embed - t_chunk,
-            t_store - t_embed,
-            t_store - t_start,
-        )
-
         return len(chunks)
 
     def _extract(self, filename: str, file_bytes: bytes) -> str:

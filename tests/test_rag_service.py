@@ -1,7 +1,7 @@
 # tests/test_rag_service.py
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.core.services.rag_service import RagOrchestrationService
+from app.services.rag_service import RagOrchestrationService
 
 @pytest.mark.asyncio
 async def test_stream_appends_sources_at_the_end(mocker):

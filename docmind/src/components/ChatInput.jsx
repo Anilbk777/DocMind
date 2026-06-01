@@ -214,7 +214,6 @@ export default function ChatInput({ onSend, disabled }) {
           </svg>
         </button>
       </form>
-      <p className={styles.hint}>Shift+Enter for new line · Enter to send</p>
     </div>
   );
 }
