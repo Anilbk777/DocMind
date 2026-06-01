@@ -1,8 +1,11 @@
+from app.core.models import DocumentModel
+from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
 
 # from langchain_chroma import Chroma
 from concurrent.futures import ThreadPoolExecutor
-
+import uuid
+from sqlalchemy import select, delete
 from app.services.job_tracker import job_tracker
 from app.services.websocket_manager import websocket_manager
 from app.ingestion.ingestion_pipeline import RAGIngestionPipeline
@@ -21,13 +24,14 @@ logger = LoggerFactory.get_logger(__name__)
 
 
 class DocumentProcessingService:
-    def __init__(self, executor: ThreadPoolExecutor):
+    def __init__(self, executor: ThreadPoolExecutor, db: AsyncSession):
         """
         Manages async background document execution windows in development.
 
         :param executor: A shared ThreadPoolExecutor instance to keep heavy CPU loads off the event loop.
         """
         self._ingestion_pipeline = RAGIngestionPipeline()
+        self.db = db
         self._executor = executor
 
     async def process_document_background(
@@ -69,14 +73,13 @@ class DocumentProcessingService:
             )
             raise
 
-    # def _run_blocking_pipeline(self, filename: str, file_bytes: bytes) -> int:
-    #     """
-    #     Synchronous proxy execution worker block running inside a thread assignment.
-    #     """
-    #     return self._ingestion_pipeline.process_file(filename, file_bytes)
-
     async def process_and_store_document_background(
-        self, job_id: str, file_name: str, file_bytes: bytes
+        self,
+        user_id: uuid.UUID,
+        job_id: str,
+        file_name: str,
+        file_bytes: bytes,
+        file_size: int,
     ) -> None:
         """
         Orchestrates the atomic ingestion and storage of a document.
@@ -100,6 +103,16 @@ class DocumentProcessingService:
                     file_name, file_bytes, folder="documents"
                 )
                 logger.info(f"Successfully saved '{file_name}' to storage.")
+
+                document = DocumentModel(
+                    user_id=user_id,
+                    file_name=file_name,
+                    storage_uri=saved_path,
+                    file_size=file_size,
+                )
+                self.db.add(document)
+                await self.db.commit()
+                logger.info(f"Saved document metadata to database for '{file_name}'")
                 # Mark job as success
                 job_tracker.update_job_success(job_id, saved_path, chunks_created)
             except Exception as storage_err:
@@ -108,6 +121,8 @@ class DocumentProcessingService:
                 )
                 # Rollback vector store insertion since disk storage failed
                 await self.delete_document(file_name)
+                await self.db.rollback()
+                job_tracker.update_job_error(job_id, str(storage_err))
                 raise storage_err
 
         except Exception as e:
@@ -118,6 +133,7 @@ class DocumentProcessingService:
 
     async def process_batch_background(
         self,
+        user_id: uuid.UUID,
         batch_id: str,
         jobs: list[tuple[str, str, bytes]],
     ) -> None:
@@ -131,12 +147,16 @@ class DocumentProcessingService:
 
         semaphore = asyncio.Semaphore(2)
 
-        async def throttled_worker(job_id, filename, file_bytes):
+        async def throttled_worker(job_id, filename, file_bytes, file_size):
             nonlocal completed_count
             async with semaphore:
                 # This calls your underlying thread-pool offloaded method
                 await self.process_and_store_document_background(
-                    job_id, filename, file_bytes
+                    user_id,
+                    job_id,
+                    filename,
+                    file_bytes,
+                    file_size,
                 )
 
                 job = job_tracker.get_job(job_id)
@@ -167,8 +187,8 @@ class DocumentProcessingService:
 
         # 1.list of raw coroutines
         coroutines = [
-            throttled_worker(job_id, filename, file_bytes)
-            for job_id, filename, file_bytes in jobs
+            throttled_worker(job_id, filename, file_bytes, file_size)
+            for job_id, filename, file_bytes, file_size in jobs
         ]
 
         # 2. Gather them safely. It automatically converts coroutines to tasks.
@@ -184,16 +204,20 @@ class DocumentProcessingService:
                 )
         logger.info("Batch processing complete.")
 
-    async def get_documents(self):
-        storage_svc = get_storage_service()
+    async def get_documents(self, user_id: uuid.UUID) -> list[DocumentModel]:
         try:
-            documents = await storage_svc.get_documents()
+            result = await self.db.execute(
+                select(DocumentModel)
+                .where(DocumentModel.user_id == user_id)
+                .order_by(DocumentModel.created_at.desc())
+            )
+            documents = result.scalars().all()
             return documents
         except Exception as e:
             logger.error(f"Failed to retrieve documents: {str(e)}")
             raise DocumentRetrievalError(f"Failed to retrieve documents: {str(e)}")
 
-    async def delete_document(self, file_name: str):
+    async def delete_document(self, file_name: str, user_id: uuid.UUID):
         logger.info(f"Initiating the deletion of file: '{file_name}'")
         chroma_deleted = False
         disk_deleted = False
@@ -214,6 +238,23 @@ class DocumentProcessingService:
         try:
             storage_svc = get_storage_service()
             disk_deleted = await storage_svc.delete_file(file_name)
+            try:
+                await self.db.execute(
+                    delete(DocumentModel)
+                    .where(DocumentModel.file_name == file_name)
+                    .where(DocumentModel.user_id == user_id)
+                )
+                await self.db.commit()
+                logger.info(
+                    f"Deleted document metadata for '{file_name}' from database."
+                )
+            except Exception as db_del_err:
+                logger.error(
+                    f"Failed to delete document metadata from database for '{file_name}': {str(db_del_err)}"
+                )
+                raise FileCannotBeDeleted(
+                    "Failed to delete document metadata from database."
+                ) from db_del_err
         except Exception as disk_err:
             logger.error(
                 f"Physical disk purge failed for '{file_name}': {str(disk_err)}"

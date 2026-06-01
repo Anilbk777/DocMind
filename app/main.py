@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routers.upload_router import router as upload_router
 from app.api.routers.chat_router import router as chat_router
 from app.api.routers.auth_router import router as auth_router
-from app.core.models import UserModel, ChatSessionModel, ChatMessageModel 
+from app.core.models import UserModel, ChatSessionModel, ChatMessageModel , DocumentModel
 from app.core.database import Base, engine
 import os
 

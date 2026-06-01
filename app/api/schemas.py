@@ -16,11 +16,6 @@ class ChatRequest(BaseModel):
     )
 
 
-class DocumentResponse(BaseModel):
-    file_name: str
-    storage_uri: str
-
-
 class UserRegisterRequest(BaseModel):
     username: str = Field(
         ...,
@@ -94,3 +89,13 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class UserDocumentResponse(BaseModel):
+    id: uuid.UUID
+    file_name: str
+    file_size: int
+    storage_uri: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

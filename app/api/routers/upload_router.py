@@ -13,12 +13,13 @@ from fastapi import (
 )
 
 from app.api.dependencies import get_document_processing_service
-from app.api.schemas import DocumentResponse
+from app.api.schemas import UserDocumentResponse
 from app.services.document_service import DocumentProcessingService
 from app.services.job_tracker import job_tracker
 from app.services.websocket_manager import websocket_manager
 from app.utils.exceptions import FileCannotBeDeleted
 from app.utils.logging import LoggerFactory
+from app.api.dependencies import CurrentUser
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -31,9 +32,13 @@ router = APIRouter(prefix="/api/v1", tags=["RAG API"])
 @router.post("/upload", status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
     background_tasks: BackgroundTasks,
+    current_user: CurrentUser,
     files: list[UploadFile] = File(...),
     doc_service: DocumentProcessingService = Depends(get_document_processing_service),
 ):
+    user_id = current_user.id
+    logger.info(f"User {user_id} uploading files")
+
     logger.info("Files received")
     accepted_files = files[:MAX_FILES_PER_BATCH]
     discarded_count = len(files) - len(accepted_files)
@@ -57,11 +62,12 @@ async def upload_document(
 
         job_id = str(uuid.uuid4())
         job_tracker.create_job(job_id, file.filename, batch_id)
-        jobs.append((job_id, file.filename, file_bytes))
+        jobs.append((job_id, file.filename, file_bytes, file.size))
 
     logger.info(f"Queuing {len(jobs)} file(s) for background processing.")
     background_tasks.add_task(
         doc_service.process_batch_background,
+        user_id,
         batch_id,
         jobs,
     )
@@ -81,16 +87,17 @@ async def upload_document(
 @router.get(
     "/documents",
     status_code=status.HTTP_200_OK,
-    response_model=list[DocumentResponse],
+    response_model=list[UserDocumentResponse],
 )
 async def get_documents(
+    current_user: CurrentUser,
     doc_service: DocumentProcessingService = Depends(get_document_processing_service),
 ):
     try:
         logger.info("Getting documents from storage")
-        documents = await doc_service.get_documents()
+        documents = await doc_service.get_documents(current_user.id)
         logger.info(f"Found {len(documents)} documents")
-        return [DocumentResponse.model_validate(doc) for doc in documents]
+        return documents
     except Exception:
         logger.error("An error occurred while fetching documents")
         raise HTTPException(
@@ -105,12 +112,13 @@ async def get_documents(
 )
 async def delete_file(
     file_name: str,
+    current_user: CurrentUser,
     doc_service: DocumentProcessingService = Depends(get_document_processing_service),
 ):
     logger.info(f"API request incoming to drop document resource: '{file_name}'")
 
     try:
-        result = await doc_service.delete_document(file_name=file_name)
+        result = await doc_service.delete_document(file_name=file_name, user_id=current_user.id)
         return result
     except FileCannotBeDeleted:
         raise HTTPException(
