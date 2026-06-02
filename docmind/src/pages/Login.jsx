@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import styles from "./Auth.module.css";
 import { login as loginApi } from "../services/api";
 
-export default function Login() {
+export default function Login({ setIsAuthenticated }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,9 +16,15 @@ export default function Login() {
     setLoading(true);
     try {
       const data = await loginApi(email, password);
-
-      console.log(data);
       localStorage.setItem("token", data.access_token);
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "token",
+          newValue: data.access_token,
+          storageArea: localStorage,
+        }),
+      );
+      setIsAuthenticated(true);
       navigate("/app");
     } catch (err) {
       setError(err.message);
