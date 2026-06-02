@@ -1,8 +1,9 @@
+import { useEffect, useState } from "react";
 import UploadZone from "./UploadZone";
 import DocumentList from "./DocumentList";
 import ProcessingPanel from "./ProcessingPanel";
 import styles from "./Sidebar.module.css";
-
+import { getMe } from "../services/api";
 export default function Sidebar({
   docs,
   onFiles,
@@ -13,6 +14,27 @@ export default function Sidebar({
   onClearJobs,
   isUploading,
 }) {
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    getMe()
+      .then(setUser)
+      .catch((err) => {
+        console.error("Failed to fetch user:", err);
+        setUser(null);
+      });
+  }, []);
+   useEffect(() => {
+     const handleStorageChange = (e) => {
+       if (e.key === "token" || !localStorage.getItem("token")) {
+         setUser(null);
+       }
+     };
+     window.addEventListener("storage", handleStorageChange);
+     return () => window.removeEventListener("storage", handleStorageChange);
+   }, []);
+
+  if (!user) return null; // wait for user data
+
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.open : ""}`}>
       <div className={styles.header}>
@@ -45,7 +67,12 @@ export default function Sidebar({
           </svg>
         </button>
       </div>
-
+      <div
+        style={{ padding: "0.5rem 1rem ", textDecoration: "underline" }}
+        className="flex justify-between items-center"
+      >
+        <p className=" text-white text-lg font-bold">{user.username}</p>
+      </div>
       <div className={styles.body}>
         <div className={styles.section}>
           <p className={styles.sectionLabel}>Knowledge Base</p>

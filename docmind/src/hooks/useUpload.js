@@ -1,10 +1,20 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef,useEffect } from "react";
 import { uploadDocuments, connectBatchWebSocket } from "../services/api";
 
 export function useUpload(onSuccess) {
   const [processingJobs, setProcessingJobs] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const wsRef = useRef(null);
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "token" || !localStorage.getItem("token")) {
+        setProcessingJobs([]); // Clear jobs on logout
+        setIsUploading(false);
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   const upload = useCallback(
     async (files) => {

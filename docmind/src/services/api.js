@@ -1,6 +1,5 @@
 const API_BASE = "http://127.0.0.1:8000/api/v1";
 const WS_BASE = "ws://127.0.0.1:8000/api/v1";
-const token = localStorage.getItem("token");
 /**
  * Upload multiple files in a single request.
  * Backend expects key "files" (plural) for list[UploadFile].
@@ -24,7 +23,6 @@ export async function login(email, password) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: `username=${email}&password=${password}`,
   });
-  console.log(res);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     console.log(err);
@@ -33,7 +31,27 @@ export async function login(email, password) {
   return await res.json();
 }
 
+export async function getMe() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("No token found");
+  }
+  const res = await fetch(`${API_BASE}/auth/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch user: ${res.status}`);
+  }
+  return await res.json();
+}
+
 export async function uploadDocuments(files) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("No token found");
+  }
   const fd = new FormData();
   files.forEach((file) => fd.append("files", file));
   const res = await fetch(`${API_BASE}/upload`, {
@@ -95,6 +113,10 @@ export function connectBatchWebSocket(batchId, onMessage, onClose) {
 }
 
 export async function getDocuments() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("No token found");
+  }
   const res = await fetch(`${API_BASE}/documents`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -111,6 +133,10 @@ export async function getDocuments() {
 }
 
 export async function deleteDocument(filename) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("No token found");
+  }
   const res = await fetch(
     `${API_BASE}/documents/${encodeURIComponent(filename)}`,
     {
@@ -128,6 +154,10 @@ export async function deleteDocument(filename) {
 }
 
 export async function* streamChat(query, provider) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("No token found");
+  }
   const res = await fetch(`${API_BASE}/chat`, {
     method: "POST",
     headers: {

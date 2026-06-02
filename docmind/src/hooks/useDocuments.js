@@ -1,17 +1,30 @@
-import { useState, useCallback } from 'react';
-import { getDocuments, deleteDocument } from '../services/api';
+import { useState, useCallback, useEffect } from "react";
+import { getDocuments, deleteDocument } from "../services/api";
 
 export function useDocuments() {
-  const [docs,        setDocs]        = useState([]);
-  const [loading,     setLoading]     = useState(false);
+  const [docs, setDocs] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [token, setToken] = useState(localStorage.getItem("token"));
+
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "token" || !localStorage.getItem("token")) {
+        setDocs([]); // Clear docs when token changes
+        setToken(localStorage.getItem("token"));
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
       const list = await getDocuments();
-      setDocs(list);
-    } catch {
-      // silently ignore if endpoint isn't ready yet
+      setDocs(Array.isArray(list) ? list : []);
+    } catch (error) {
+      console.error("Failed to fetch documents:", error);
+      setDocs([]);
     } finally {
       setInitialLoad(false);
     }
@@ -21,8 +34,7 @@ export function useDocuments() {
     setLoading(true);
     try {
       const status = await deleteDocument(filename);
-      // 200, 204, 404 all mean "gone"
-      setDocs(prev => prev.filter(d => d !== filename));
+      setDocs((prev) => prev.filter((d) => d !== filename));
       return { ok: true, status };
     } catch (err) {
       return { ok: false, error: err.message };

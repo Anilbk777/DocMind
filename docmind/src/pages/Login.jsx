@@ -17,13 +17,7 @@ export default function Login({ setIsAuthenticated }) {
     try {
       const data = await loginApi(email, password);
       localStorage.setItem("token", data.access_token);
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: "token",
-          newValue: data.access_token,
-          storageArea: localStorage,
-        }),
-      );
+
       setIsAuthenticated(true);
       navigate("/app");
     } catch (err) {
