@@ -79,7 +79,12 @@ async def upload_document(
         "accepted": len(jobs),
         "discarded": discarded_count,
         "jobs": [
-            {"job_id": job_id, "filename": filename} for job_id, filename, _ in jobs
+            {
+                "job_id": job_id,
+                "filename": filename,
+                "size": file_size
+            }
+            for job_id, filename, _, file_size in jobs
         ],
     }
 
@@ -98,6 +103,13 @@ async def get_documents(
         documents = await doc_service.get_documents(current_user.id)
         logger.info(f"Found {len(documents)} documents")
         return documents
+
+    except DocumentRetrievalError:
+        logger.error("Document retrieval error")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Failed to retrieve documents",
+        )
     except Exception:
         logger.error("An error occurred while fetching documents")
         raise HTTPException(

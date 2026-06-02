@@ -45,8 +45,9 @@ class RAGIngestionPipeline:
 
         # Phase 4: Store
         logger.info(
-            "[Phase 4] Storing embeddings, documents, and metadata for '%s'…",
+            "[Phase 4] Storing embeddings, documents, and metadata for '%s'… userid %s",
             filename,
+            user_id,
         )
         self._store(texts, embeddings, metadatas, ids, filename)
 

@@ -12,7 +12,7 @@ from app.api.dependencies import CurrentUser
 from app.core.auth import create_access_token, hash_password, verify_password
 
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 @router.post(

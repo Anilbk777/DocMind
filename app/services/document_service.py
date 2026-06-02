@@ -35,7 +35,10 @@ class DocumentProcessingService:
         self._executor = executor
 
     async def process_document_background(
-        self, filename: str, file_bytes: bytes
+        self,
+        filename: str,
+        file_bytes: bytes,
+        user_id: uuid.UUID,
     ) -> int:
         """
         Runs document execution safely inside an isolated worker thread.
@@ -51,6 +54,7 @@ class DocumentProcessingService:
                 self._ingestion_pipeline.process_file,
                 filename,
                 file_bytes,
+                user_id,
             )
             logger.info(
                 f"Thread execution complete. Indexed {total_chunks} chunks for '{filename}'"
@@ -90,7 +94,7 @@ class DocumentProcessingService:
         try:
             # Step 1: Ingest into Vector Store (heavy CPU task on ThreadPool)
             chunks_created = await self.process_document_background(
-                file_name, file_bytes
+                file_name, file_bytes, user_id
             )
             logger.info(
                 f"Successfully processed {chunks_created} chunks for '{file_name}'"
@@ -195,7 +199,7 @@ class DocumentProcessingService:
         results = await asyncio.gather(*coroutines, return_exceptions=True)
 
         # 3. Process results
-        for (job_id, filename, _), result in zip(jobs, results):
+        for (job_id, filename, _, _), result in zip(jobs, results):
             if isinstance(result, BaseException):
                 logger.error(f"Batch job {job_id} ('{filename}') failed: {result}")
             else:
