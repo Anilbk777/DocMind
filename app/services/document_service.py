@@ -6,7 +6,6 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import uuid
 from sqlalchemy import select, delete
-from app.services.job_tracker import job_tracker
 from app.services.websocket_manager import websocket_manager
 from app.ingestion.ingestion_pipeline import RAGIngestionPipeline
 from app.ingestion.rag_components import VectorStore
@@ -19,12 +18,15 @@ from app.utils.exceptions import (
     VectorStoreError,
 )
 from app.utils.logging import LoggerFactory
+from app.services.job_tracker import JobTracker
 
 logger = LoggerFactory.get_logger(__name__)
 
 
 class DocumentProcessingService:
-    def __init__(self, executor: ThreadPoolExecutor, db: AsyncSession):
+    def __init__(
+        self, executor: ThreadPoolExecutor, db: AsyncSession, job_tracker: JobTracker
+    ):
         """
         Manages async background document execution windows in development.
 
@@ -33,6 +35,7 @@ class DocumentProcessingService:
         self._ingestion_pipeline = RAGIngestionPipeline()
         self.db = db
         self._executor = executor
+        self._job_tracker = job_tracker
 
     async def process_document_background(
         self,
@@ -118,7 +121,7 @@ class DocumentProcessingService:
                 await self.db.commit()
                 logger.info(f"Saved document metadata to database for '{file_name}'")
                 # Mark job as success
-                job_tracker.update_job_success(job_id, saved_path, chunks_created)
+                self._job_tracker.update_job_success(job_id, saved_path, chunks_created)
             except Exception as storage_err:
                 logger.error(
                     f"Failed to save '{file_name}' to storage: {storage_err}. Rolling back vector store..."
@@ -126,14 +129,14 @@ class DocumentProcessingService:
                 # Rollback vector store insertion since disk storage failed
                 await self.delete_document(file_name)
                 await self.db.rollback()
-                job_tracker.update_job_error(job_id, str(storage_err))
+                self._job_tracker.update_job_error(job_id, str(storage_err))
                 raise storage_err
 
         except Exception as e:
             logger.error(
                 f"Background processing failed for job {job_id} ('{file_name}'): {str(e)}"
             )
-            job_tracker.update_job_error(job_id, str(e))
+            self._job_tracker.update_job_error(job_id, str(e))
 
     async def process_batch_background(
         self,
@@ -163,7 +166,7 @@ class DocumentProcessingService:
                     file_size,
                 )
 
-                job = job_tracker.get_job(job_id)
+                job = self._job_tracker.get_job(job_id)
                 completed_count += 1
                 is_last = completed_count == total_jobs
                 if job and job["status"] == "completed":

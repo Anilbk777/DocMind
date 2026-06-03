@@ -1,3 +1,4 @@
+from pydantic_core import ValidationError
 from app.api.dependencies import CurrentUser
 from fastapi import APIRouter, HTTPException, status
 
@@ -33,6 +34,12 @@ async def chat(payload: ChatRequest, current_user: CurrentUser):
         rag_service = _build_rag_service(payload)
         stream = rag_service.answer_question_stream(
             question=payload.query, user_id=current_user.id
+        )
+
+    except ValidationError as e:
+        logger.warning(f"Validation error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
         )
     except RAGServiceException as e:
         logger.warning(f"RAG service init error: {e}")

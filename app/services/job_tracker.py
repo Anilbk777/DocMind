@@ -52,4 +52,4 @@ class JobTracker:
         return [job for job in self.jobs.values() if job["batch_id"] == batch_id]
 
 
-job_tracker = JobTracker()
+

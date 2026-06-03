@@ -10,6 +10,7 @@ class ChatRequest(BaseModel):
         ...,
         description="The question or prompt you want the RAG system to answer.",
         min_length=1,
+        max_length=1000,
     )
     provider: LLMProvider = Field(
         ..., description="Select your preferred LLM engine from the dropdown menu."

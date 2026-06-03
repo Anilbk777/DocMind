@@ -15,11 +15,10 @@ from fastapi import (
 from app.api.dependencies import get_document_processing_service
 from app.api.schemas import UserDocumentResponse
 from app.services.document_service import DocumentProcessingService
-from app.services.job_tracker import job_tracker
 from app.services.websocket_manager import websocket_manager
 from app.utils.exceptions import FileCannotBeDeleted, DocumentRetrievalError
 from app.utils.logging import LoggerFactory
-from app.api.dependencies import CurrentUser
+from app.api.dependencies import CurrentUser, JobTrackerDep
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -33,8 +32,9 @@ router = APIRouter(prefix="/api/v1", tags=["RAG API"])
 async def upload_document(
     background_tasks: BackgroundTasks,
     current_user: CurrentUser,
-    files: list[UploadFile] = File(...),
+    job_tracker: JobTrackerDep,
     doc_service: DocumentProcessingService = Depends(get_document_processing_service),
+    files: list[UploadFile] = File(...),
 ):
     user_id = current_user.id
     logger.info(f"User {user_id} uploading files")
@@ -79,11 +79,7 @@ async def upload_document(
         "accepted": len(jobs),
         "discarded": discarded_count,
         "jobs": [
-            {
-                "job_id": job_id,
-                "filename": filename,
-                "size": file_size
-            }
+            {"job_id": job_id, "filename": filename, "size": file_size}
             for job_id, filename, _, file_size in jobs
         ],
     }
@@ -155,7 +151,11 @@ async def delete_file(
 
 
 @router.websocket("/ws/batch/{batch_id}")
-async def batch_status_websocket(batch_id: str, websocket: WebSocket):
+async def batch_status_websocket(
+    batch_id: str,
+    websocket: WebSocket,
+    job_tracker: JobTrackerDep,
+):
 
     await websocket_manager.connect(batch_id, websocket)
     batch_jobs = job_tracker.get_batch_jobs(batch_id)
