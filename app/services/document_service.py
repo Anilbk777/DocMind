@@ -127,7 +127,7 @@ class DocumentProcessingService:
                     f"Failed to save '{file_name}' to storage: {storage_err}. Rolling back vector store..."
                 )
                 # Rollback vector store insertion since disk storage failed
-                await self.delete_document(file_name)
+                await self.delete_document(file_name, user_id)
                 await self.db.rollback()
                 self._job_tracker.update_job_error(job_id, str(storage_err))
                 raise storage_err
@@ -223,66 +223,6 @@ class DocumentProcessingService:
         except Exception as e:
             logger.error(f"Failed to retrieve documents: {str(e)}")
             raise DocumentRetrievalError(f"Failed to retrieve documents: {str(e)}")
-
-    # async def delete_document(self, file_name: str, user_id: uuid.UUID):
-    #     logger.info(f"Initiating the deletion of file: '{file_name}'")
-    #     chroma_deleted = False
-    #     disk_deleted = False
-    #     vector_store = VectorStore.get_vector_store()
-
-    #     result = await self.db.execute(
-    #         select(DocumentModel)
-    #         .where(DocumentModel.file_name == file_name)
-    #         .where(DocumentModel.user_id == user_id)
-    #     )
-    #     document = result.scalars().first()
-    #     if not document:
-    #         raise DocumentRetrievalError(f"Document '{file_name}' not found.")
-
-    #     try:
-    #         await asyncio.to_thread(vector_store.delete, where={"source": file_name})
-    #         chroma_deleted = True
-    #         logger.info(
-    #             f"Vector embeddings matching source '{file_name}' dropped from ChromaDB."
-    #         )
-    #     except Exception as db_err:
-    #         logger.error(
-    #             f"Vector store database purge failed for '{file_name}': {str(db_err)}"
-    #         )
-    #         raise FileCannotBeDeleted("Vector store database purge failed.") from db_err
-
-    #     try:
-    #         storage_svc = get_storage_service()
-    #         disk_deleted = await storage_svc.delete_file(file_name)
-    #         try:
-    #             await self.db.execute(
-    #                 delete(DocumentModel)
-    #                 .where(DocumentModel.file_name == file_name)
-    #                 .where(DocumentModel.user_id == user_id)
-    #             )
-    #             await self.db.commit()
-    #             logger.info(
-    #                 f"Deleted document metadata for '{file_name}' from database."
-    #             )
-    #         except Exception as db_del_err:
-    #             logger.error(
-    #                 f"Failed to delete document metadata from database for '{file_name}': {str(db_del_err)}"
-    #             )
-    #             raise FileCannotBeDeleted(
-    #                 "Failed to delete document metadata from database."
-    #             ) from db_del_err
-    #     except Exception as disk_err:
-    #         logger.error(
-    #             f"Physical disk purge failed for '{file_name}': {str(disk_err)}"
-    #         )
-    #         raise FileCannotBeDeleted("Physical disk purge failed") from disk_err
-
-    #     if not chroma_deleted or not disk_deleted:
-    #         raise FileCannotBeDeleted(
-    #             f"Could not drop asset references for '{file_name}' ."
-    #         )
-
-    #     return {"chroma_purged": chroma_deleted, "disk_removed": disk_deleted}
 
     async def delete_document(self, file_name: str, user_id: uuid.UUID) -> dict:
         logger.info(
