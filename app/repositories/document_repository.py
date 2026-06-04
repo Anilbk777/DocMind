@@ -34,7 +34,7 @@ class DocumentRepository:
         return result.scalars().first()
 
     @staticmethod
-    async def delete_by_id(db: AsyncSession, document_id: int) -> None:
+    async def delete_by_id(db: AsyncSession, document_id: uuid.UUID) -> None:
         """Deletes a document record explicitly matching its primary ID index."""
         await db.execute(
             delete(DocumentModel).where(DocumentModel.id == document_id)

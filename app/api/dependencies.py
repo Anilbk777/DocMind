@@ -8,21 +8,22 @@ from app.core.models import UserModel
 from sqlalchemy import select
 from concurrent.futures import ThreadPoolExecutor
 from app.services.job_tracker import JobTracker
+from app.core.database import AsyncSessionLocal
 
 
 async def get_job_tracker():
     return JobTracker()
 
 
-
-
-
 async def get_document_processing_service(
-    request: Request, db=Depends(get_db), job_tracker: JobTracker = Depends(get_job_tracker)
+    request: Request,
+    db=Depends(get_db),
+    job_tracker: JobTracker = Depends(get_job_tracker),
 ) -> DocumentProcessingService:
     """Dependency to retrieve document processing service."""
     executor: ThreadPoolExecutor = request.app.state.thread_executor
-    return DocumentProcessingService(executor, db, job_tracker)
+    session_factory: AsyncSessionLocal = request.app.state.session_factory
+    return DocumentProcessingService(executor, session_factory, job_tracker)
 
 
 async def get_current_user(

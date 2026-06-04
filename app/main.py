@@ -10,7 +10,7 @@ from app.api.routers.upload_router import router as upload_router
 from app.api.routers.chat_router import router as chat_router
 from app.api.routers.auth_router import router as auth_router
 from app.core.models import UserModel, ChatSessionModel, ChatMessageModel , DocumentModel
-from app.core.database import Base, engine
+from app.core.database import Base, engine, AsyncSessionLocal
 import os
 
 load_dotenv()
@@ -25,7 +25,8 @@ async def app_lifespan(app: FastAPI):
     logger.info("Creating database tables if not exists...")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
+    
+    app.state.session_factory = AsyncSessionLocal
     logger.info("Initializing application ThreadPoolExecutor...")
     app.state.thread_executor = ThreadPoolExecutor(
         max_workers=MAX_INGESTION_WORKERS, thread_name_prefix="ingestion_worker"

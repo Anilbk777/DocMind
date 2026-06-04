@@ -1,10 +1,11 @@
+from app.repositories.document_repository import DocumentRepository
 from app.core.models import DocumentModel
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+
 import asyncio
 
 from concurrent.futures import ThreadPoolExecutor
 import uuid
-from sqlalchemy import select, delete
 from app.services.websocket_manager import websocket_manager
 from app.ingestion.ingestion_pipeline import RAGIngestionPipeline
 from app.ingestion.rag_components import VectorStore
@@ -24,7 +25,7 @@ logger = LoggerFactory.get_logger(__name__)
 
 class DocumentProcessingService:
     def __init__(
-        self, executor: ThreadPoolExecutor, db: AsyncSession, job_tracker: JobTracker
+        self, executor: ThreadPoolExecutor, session_factory: async_sessionmaker[AsyncSession], job_tracker: JobTracker
     ):
         """
         Manages async background document execution windows in development.
@@ -32,9 +33,10 @@ class DocumentProcessingService:
         :param executor: A shared ThreadPoolExecutor instance to keep heavy CPU loads off the event loop.
         """
         self._ingestion_pipeline = RAGIngestionPipeline()
-        self.db = db
+        self.session_factory = session_factory
         self._executor = executor
         self._job_tracker = job_tracker
+        self.repo = DocumentRepository()
 
     async def process_document_background(
         self,
@@ -116,8 +118,9 @@ class DocumentProcessingService:
                     storage_uri=saved_path,
                     file_size=file_size,
                 )
-                self.db.add(document)
-                await self.db.commit()
+                async with self.session_factory() as session:
+                    await self.repo.save(session, document)
+
                 logger.info(f"Saved document metadata to database for '{file_name}'")
                 # Mark job as success
                 self._job_tracker.update_job_success(job_id, saved_path, chunks_created)
@@ -127,7 +130,7 @@ class DocumentProcessingService:
                 )
                 # Rollback vector store insertion since disk storage failed
                 await self.delete_document(file_name, user_id)
-                await self.db.rollback()
+
                 self._job_tracker.update_job_error(job_id, str(storage_err))
                 raise storage_err
 
@@ -212,13 +215,8 @@ class DocumentProcessingService:
 
     async def get_documents(self, user_id: uuid.UUID) -> list[DocumentModel]:
         try:
-            result = await self.db.execute(
-                select(DocumentModel)
-                .where(DocumentModel.user_id == user_id)
-                .order_by(DocumentModel.created_at.desc())
-            )
-            documents = result.scalars().all()
-            return documents
+            async with self.session_factory() as session:
+                return await self.repo.get_all_by_user(session, user_id)
         except Exception as e:
             logger.error(f"Failed to retrieve documents: {str(e)}")
             raise DocumentRetrievalError(f"Failed to retrieve documents: {str(e)}")
@@ -229,12 +227,8 @@ class DocumentProcessingService:
         )
 
         # 1. Fetch the exact metadata record first
-        result = await self.db.execute(
-            select(DocumentModel).where(
-                DocumentModel.file_name == file_name, DocumentModel.user_id == user_id
-            )
-        )
-        document = result.scalars().first()
+        async with self.session_factory() as session:
+            document = await self.repo.get_by_filename(session, file_name, user_id)
 
         if not document:
             logger.warning(
@@ -276,12 +270,7 @@ class DocumentProcessingService:
 
         # 4. Clean index rows from Relational DB (PostgreSQL)
         try:
-            await self.db.execute(
-                delete(DocumentModel).where(
-                    DocumentModel.id == document.id
-                )  # Targets the record precisely by ID
-            )
-            await self.db.commit()
+            await self.repo.delete_by_id(session, target_doc_id)
             logger.info(
                 f"Deleted document metadata index row for record ID: {target_doc_id}"
             )
