@@ -2,7 +2,6 @@ from app.core.models import DocumentModel
 from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
 
-# from langchain_chroma import Chroma
 from concurrent.futures import ThreadPoolExecutor
 import uuid
 from sqlalchemy import select, delete
