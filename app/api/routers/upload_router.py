@@ -11,14 +11,15 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-
+from typing import Annotated
 from app.api.dependencies import get_document_processing_service
 from app.api.schemas import UserDocumentResponse
 from app.services.document_service import DocumentProcessingService
 from app.services.websocket_manager import websocket_manager
 from app.utils.exceptions import FileCannotBeDeleted, DocumentRetrievalError
 from app.utils.logging import LoggerFactory
-from app.api.dependencies import CurrentUser, JobTrackerDep
+from app.services.job_tracker import JobTracker
+from app.api.dependencies import CurrentUser, get_job_tracker
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -32,8 +33,10 @@ router = APIRouter(prefix="/api/v1", tags=["RAG API"])
 async def upload_document(
     background_tasks: BackgroundTasks,
     current_user: CurrentUser,
-    job_tracker: JobTrackerDep,
-    doc_service: DocumentProcessingService = Depends(get_document_processing_service),
+    job_tracker: Annotated[JobTracker, Depends(get_job_tracker)],
+    doc_service: Annotated[
+        DocumentProcessingService, Depends(get_document_processing_service)
+    ],
     files: list[UploadFile] = File(...),
 ):
     user_id = current_user.id
@@ -92,7 +95,9 @@ async def upload_document(
 )
 async def get_documents(
     current_user: CurrentUser,
-    doc_service: DocumentProcessingService = Depends(get_document_processing_service),
+    doc_service: Annotated[
+        DocumentProcessingService, Depends(get_document_processing_service)
+    ],
 ):
     try:
         logger.info("Getting documents from storage")
@@ -121,7 +126,9 @@ async def get_documents(
 async def delete_file(
     file_name: str,
     current_user: CurrentUser,
-    doc_service: DocumentProcessingService = Depends(get_document_processing_service),
+    doc_service: Annotated[
+        DocumentProcessingService, Depends(get_document_processing_service)
+    ],
 ):
     logger.info(f"API request incoming to drop document resource: '{file_name}'")
 
@@ -152,9 +159,9 @@ async def delete_file(
 
 @router.websocket("/ws/batch/{batch_id}")
 async def batch_status_websocket(
+    job_tracker: Annotated[JobTracker, Depends(get_job_tracker)],
     batch_id: str,
     websocket: WebSocket,
-    job_tracker: JobTrackerDep,
 ):
 
     await websocket_manager.connect(batch_id, websocket)

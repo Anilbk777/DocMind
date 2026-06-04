@@ -14,11 +14,11 @@ async def get_job_tracker():
     return JobTracker()
 
 
-JobTrackerDep = Annotated[JobTracker, Depends(get_job_tracker)]
+
 
 
 async def get_document_processing_service(
-    request: Request, db=Depends(get_db), job_tracker: JobTracker = JobTrackerDep
+    request: Request, db=Depends(get_db), job_tracker: JobTracker = Depends(get_job_tracker)
 ) -> DocumentProcessingService:
     """Dependency to retrieve document processing service."""
     executor: ThreadPoolExecutor = request.app.state.thread_executor
