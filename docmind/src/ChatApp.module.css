@@ -3,6 +3,7 @@
   height: 100vh;
   overflow: hidden;
   position: relative;
+  background: var(--white);
 }
 
 .chatCol {
@@ -16,39 +17,106 @@
 
 .topbar {
   height: 56px;
-  background: var(--white);
+  background: white;
   border-bottom: 1px solid var(--blush);
   display: flex;
   align-items: center;
-  padding: 0 24px;
-  gap: 10px;
+  padding: 0 20px;
+  justify-content: space-between;
   flex-shrink: 0;
+}
+
+.topbarTitleWrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 0 20px;
+  min-width: 0;
 }
 
 .topbarTitle {
   font-size: 13px;
   font-weight: 500;
   color: var(--charcoal);
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 500px;
 }
 
-/* Hamburger button — hidden on desktop */
-.hamburger {
-  display: none;
+.logoutBtnSmall {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--blush);
+  background: var(--white);
+  color: var(--rose);
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid var(--blush);
-  background: var(--cream);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logoutBtnSmall:hover {
+  background: var(--rose);
+  color: white;
+  box-shadow: 0 4px 12px rgba(223, 127, 131, 0.2);
+}
+
+.hamburger {
+  background: none;
+  border: none;
   color: var(--charcoal);
   cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
 }
-.hamburger:hover { background: var(--blush); }
 
-/* Backdrop — mobile only */
+.hamburger:hover {
+  background: var(--cream);
+}
+
+.appContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: white;
+}
+
+/* This is the class used in ChatApp.jsx <main> */
+.mainFrame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: var(--white);
+}
+
+/* This is used in ChatView.jsx wrapper */
+.chatViewWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.inputWrapper {
+  padding: 10px 40px 20px;
+  background: transparent;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
 .backdrop {
   display: none;
   position: fixed;
@@ -58,19 +126,13 @@
   backdrop-filter: blur(2px);
   animation: fadeIn 0.2s ease;
 }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* ── Mobile ── */
 @media (max-width: 768px) {
-  .topbar {
-    padding: 0 16px;
-  }
-
-  .hamburger {
-    display: flex;
-  }
-
-  .backdrop {
-    display: block;
-  }
+  .topbar { padding: 0 16px; }
+  .backdrop { display: block; }
+  .hamburger { display: flex; }
+  .topbarTitle { font-size: 12px; }
+  .inputWrapper { padding: 16px 20px 24px; }
 }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

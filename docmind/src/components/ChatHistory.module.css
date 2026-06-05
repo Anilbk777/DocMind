@@ -1,0 +1,136 @@
+.historyContainer {
+  margin-top: 24px;
+}
+
+.historyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  margin-bottom: 12px;
+}
+
+.historyTitle {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--rose);
+}
+
+.newChatBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 8px;
+  color: var(--charcoal);
+  opacity: 0.5;
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.newChatBtn:hover {
+  opacity: 1;
+  background: white;
+  border-color: var(--blush);
+  color: var(--rose);
+}
+
+.sessionList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.sessionItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--charcoal);
+  background: white;
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+.sessionItem:hover {
+  border-color: var(--blush);
+  background: var(--white);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.sessionItemActive {
+  background: white;
+  border-color: var(--blush);
+  color: var(--rose);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+.sessionIcon {
+  flex-shrink: 0;
+  color: var(--rose);
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.sessionItemActive .sessionIcon {
+  opacity: 1;
+}
+
+.sessionTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 28px;
+}
+
+.deleteBtn {
+  position: absolute;
+  right: 12px;
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--charcoal);
+  opacity: 0;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.sessionItem:hover .deleteBtn {
+  opacity: 0.3;
+}
+
+.deleteBtn:hover {
+  opacity: 1 !important;
+  color: var(--coral);
+  background: rgba(248, 116, 114, 0.08);
+}
+
+.emptyState {
+  font-size: 12px;
+  color: var(--charcoal);
+  opacity: 0.4;
+  font-style: italic;
+  padding: 12px 4px;
+}
+
+.divider {
+  border-bottom: 1px solid var(--blush);
+  margin: 20px 4px 0;
+  opacity: 0.5;
+}

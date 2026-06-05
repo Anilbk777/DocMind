@@ -45,7 +45,11 @@ export default function App() {
           element={
             isAuthenticated ? <ChatApp /> : <Navigate to="/login" replace />
           }
-        />
+        >
+          <Route path="chat" element={<div />} /> {/* Placeholders, will be handled by ChatApp's Outlet */}
+          <Route path="library" element={<div />} />
+          <Route index element={<Navigate to="chat" replace />} />
+        </Route>
         <Route
           path="/"
           element={

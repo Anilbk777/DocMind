@@ -35,14 +35,11 @@ function DocItem({ filename, onDelete }) {
 
 export default function DocumentList({ docs, onDelete }) {
   return (
-    <div className={styles.wrapper}>
-      <p className={styles.label}>Uploaded Files</p>
-      <div className={styles.list}>
-        {docs.length === 0
-          ? <p className={styles.empty}>No documents yet</p>
-          : docs.map(f => <DocItem key={f} filename={f} onDelete={onDelete} />)
-        }
-      </div>
+    <div className={styles.list}>
+      {docs.length === 0
+        ? <p className={styles.empty}>No documents yet</p>
+        : docs.map(f => <DocItem key={f} filename={f} onDelete={onDelete} />)
+      }
     </div>
   );
 }

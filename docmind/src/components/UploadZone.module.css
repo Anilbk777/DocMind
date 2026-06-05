@@ -20,3 +20,18 @@
 .labels { text-align: center; }
 .primary  { font-size: 12px; font-weight: 500; color: var(--rose); display: block; }
 .secondary { font-size: 10px; color: var(--charcoal); opacity: 0.4; margin-top: 2px; display: block; }
+
+@media (max-width: 640px) {
+  .zone {
+    padding: 16px 8px;
+  }
+  
+  .iconWrap {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .primary {
+    font-size: 11px;
+  }
+}

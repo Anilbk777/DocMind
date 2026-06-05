@@ -32,13 +32,17 @@ export function useChat() {
     setLoadingHistory(true);
     try {
       const data = await getChatMessages(sessionId, 10, 0);
-      const formatted = data.map(msg => ({
-        id: msg.id,
-        role: msg.role,
-        body: msg.content, // Backend uses 'content', frontend expects 'body'
-        sources: [], // Historical messages don't have stored sources in this simple impl
-        streaming: false
-      }));
+      const formatted = data.map(msg => {
+        if (msg.role === "user") return { id: msg.id, role: "user", body: msg.content, sources: [], streaming: false };
+        const { body, sources } = extractSources(msg.content);
+        return {
+          id: msg.id,
+          role: msg.role,
+          body,
+          sources,
+          streaming: false
+        };
+      });
       setMessages(formatted);
       setCurrentSessionId(sessionId);
       offsetRef.current = data.length;
@@ -55,13 +59,17 @@ export function useChat() {
     setLoadingHistory(true);
     try {
       const data = await getChatMessages(currentSessionId, 10, offsetRef.current);
-      const formatted = data.map(msg => ({
-        id: msg.id,
-        role: msg.role,
-        body: msg.content,
-        sources: [],
-        streaming: false
-      }));
+      const formatted = data.map(msg => {
+        if (msg.role === "user") return { id: msg.id, role: "user", body: msg.content, sources: [], streaming: false };
+        const { body, sources } = extractSources(msg.content);
+        return {
+          id: msg.id,
+          role: msg.role,
+          body,
+          sources,
+          streaming: false
+        };
+      });
       setMessages(prev => [...formatted, ...prev]);
       offsetRef.current += data.length;
       setHasMore(data.length === 10);
