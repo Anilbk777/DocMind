@@ -15,6 +15,24 @@ class ChatRequest(BaseModel):
     provider: LLMProvider = Field(
         ..., description="Select your preferred LLM engine from the dropdown menu."
     )
+    session_id: uuid.UUID | None = Field(
+        None, description="Optional session ID to continue an existing conversation."
+    )
+
+
+class ChatMessageResponse(BaseModel):
+    id: uuid.UUID
+    role: str
+    content: str
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChatSessionResponse(BaseModel):
+    id: uuid.UUID
+    title: str
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserRegisterRequest(BaseModel):

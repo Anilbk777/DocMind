@@ -153,7 +153,30 @@ export async function deleteDocument(filename) {
   return res.status;
 }
 
-export async function* streamChat(query, provider) {
+export async function getChatSessions() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+  const res = await fetch(`${API_BASE}/sessions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to fetch chat sessions");
+  return await res.json();
+}
+
+export async function getChatMessages(sessionId, limit = 10, offset = 0) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+  const res = await fetch(
+    `${API_BASE}/sessions/${sessionId}/messages?limit=${limit}&offset=${offset}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  if (!res.ok) throw new Error("Failed to fetch messages");
+  return await res.json();
+}
+
+export async function* streamChat(query, provider, sessionId = null) {
   const token = localStorage.getItem("token");
   if (!token) {
     throw new Error("No token found");
@@ -164,14 +187,37 @@ export async function* streamChat(query, provider) {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ query, provider }),
+    body: JSON.stringify({ query, provider, session_id: sessionId }),
   });
   if (!res.ok) throw new Error("Connection failed");
+
+  // Capture the session ID from headers if provided by server
+  const serverSessionId = res.headers.get("X-Chat-Session-ID");
+  
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
+  
+  // We yield the session ID first so the hook can capture it
+  if (serverSessionId) {
+    yield { type: "session_id", value: serverSessionId };
+  }
+
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
-    yield decoder.decode(value, { stream: true });
+    yield { type: "chunk", value: decoder.decode(value, { stream: true }) };
   }
+}
+export async function deleteChatSession(sessionId) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+  const res = await fetch(`${API_BASE}/sessions/${sessionId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Delete failed (${res.status})`);
+  }
+  return res.status;
 }

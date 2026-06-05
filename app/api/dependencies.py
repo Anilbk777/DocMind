@@ -10,10 +10,31 @@ from concurrent.futures import ThreadPoolExecutor
 from app.services.job_tracker import JobTracker
 from app.core.database import AsyncSessionLocal
 from app.utils.exceptions import AuthenticationException
+from app.repositories.chat_repository import ChatRepository
+from app.services.chat_service import ChatService
+from app.services.rag_service import RagOrchestrationService
+from app.services.retrieval_service import RetrievalService
 
 
 async def get_job_tracker():
     return JobTracker()
+
+
+async def get_retrieval_service() -> RetrievalService:
+    return RetrievalService()
+
+
+async def get_rag_service(
+    retrieval_svc: RetrievalService = Depends(get_retrieval_service),
+) -> RagOrchestrationService:
+    return RagOrchestrationService(retrieval_service=retrieval_svc)
+
+
+async def get_chat_service(
+    rag_svc: RagOrchestrationService = Depends(get_rag_service),
+) -> ChatService:
+    chat_repo = ChatRepository()
+    return ChatService(chat_repo=chat_repo, rag_service=rag_svc)
 
 
 async def get_document_processing_service(

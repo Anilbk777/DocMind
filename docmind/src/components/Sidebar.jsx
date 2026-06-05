@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import UploadZone from "./UploadZone";
 import DocumentList from "./DocumentList";
 import ProcessingPanel from "./ProcessingPanel";
+import ChatHistory from "./ChatHistory";
 import styles from "./Sidebar.module.css";
 import { getMe } from "../services/api";
+
 export default function Sidebar({
   docs,
   onFiles,
@@ -13,6 +15,12 @@ export default function Sidebar({
   processingJobs,
   onClearJobs,
   isUploading,
+  // New props for chat history
+  sessions = [],
+  currentSessionId = null,
+  onSessionClick,
+  onNewChat,
+  onSessionDelete,
 }) {
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
@@ -88,6 +96,14 @@ export default function Sidebar({
             Upload study materials into your vector memory store.
           </p>
         </div>
+
+        <ChatHistory 
+          sessions={sessions} 
+          currentSessionId={currentSessionId}
+          onSessionClick={onSessionClick}
+          onNewChat={onNewChat}
+          onDelete={onSessionDelete}
+        />
 
         <UploadZone onFiles={onFiles} isUploading={isUploading} />
 

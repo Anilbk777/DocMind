@@ -197,6 +197,7 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import ChatInput from "./components/ChatInput";
+import ConfirmationModal from "./components/ConfirmationModal";
 
 import { useDocuments } from "./hooks/useDocuments";
 import { useChat } from "./hooks/useChat";
@@ -207,16 +208,54 @@ import styles from "./ChatApp.module.css";
 
 export default function ChatApp() {
   const { docs, refresh, remove } = useDocuments();
-  const { messages, send, streaming } = useChat();
+  const { 
+    messages, 
+    send, 
+    streaming, 
+    sessions, 
+    currentSessionId, 
+    loadHistory, 
+    startNewChat,
+    hasMore,
+    loadMore,
+    loadingHistory,
+    deleteSession
+  } = useChat();
   const { processingJobs, upload, clearJobs, isUploading } = useUpload(refresh);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState(null);
   const navigate = useNavigate();
 
   // Load documents when component mounts
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const handleSessionSelect = useCallback((id) => {
+    loadHistory(id);
+    setSidebarOpen(false);
+  }, [loadHistory]);
+
+  const handleNewChat = useCallback(() => {
+    startNewChat();
+    setSidebarOpen(false);
+  }, [startNewChat]);
+
+  const handleDeleteRequest = useCallback((id) => {
+    setSessionToDelete(id);
+  }, []);
+
+  const handleConfirmDelete = async () => {
+    if (sessionToDelete) {
+      await deleteSession(sessionToDelete);
+      setSessionToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setSessionToDelete(null);
+  };
 
   function handleLogout() {
     localStorage.removeItem("token");
@@ -272,6 +311,11 @@ export default function ChatApp() {
           processingJobs={processingJobs}
           onClearJobs={clearJobs}
           isUploading={isUploading}
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSessionClick={handleSessionSelect}
+          onNewChat={handleNewChat}
+          onSessionDelete={handleDeleteRequest}
         />
 
         <div className={styles.chatCol}>
@@ -326,7 +370,12 @@ export default function ChatApp() {
                 marginRight: "16px",
               }}
             >
-              <span className={styles.topbarTitle}>New conversation</span>
+              <span className={styles.topbarTitle}>
+                {currentSessionId 
+                  ? sessions.find(s => s.id === currentSessionId)?.title || "Chat History"
+                  : "New conversation"
+                }
+              </span>
 
               <button
                 onClick={handleLogout}
@@ -362,12 +411,25 @@ export default function ChatApp() {
               </button>
             </div>
           </div>
-
-          <ChatWindow messages={messages} />
+          <ChatWindow 
+            messages={messages} 
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            loadingMore={loadingHistory}
+          />
 
           <ChatInput onSend={send} disabled={streaming} />
         </div>
       </div>
+
+      <ConfirmationModal 
+        isOpen={!!sessionToDelete}
+        title="Delete Chat Session?"
+        message="Are you sure you want to delete this conversation? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        confirmText="Delete Session"
+      />
     </>
   );
 }
