@@ -63,23 +63,23 @@ class RAGIngestionPipeline:
         dot_idx = filename.rfind(".")
         if dot_idx == -1:
             raise UnsupportedFileTypeError(
-                f"No file extension found in filename: '{filename}'"
+                extension="unknown",
+                internal_detail=f"No file extension found in filename: '{filename}'",
             )
 
         extension = filename[dot_idx:].lower()
         extractor_cls = EXTRACTOR_REGISTRY.get(extension)
         if extractor_cls is None:
             raise UnsupportedFileTypeError(
-                f"Extension '{extension}' has no registered extractor. "
-                f"Supported: {sorted(EXTRACTOR_REGISTRY)}"
+                extension=extension,
+                internal_detail=f"Extension '{extension}' has no registered extractor. Supported: {sorted(EXTRACTOR_REGISTRY)}",
             )
 
         raw_text = extractor_cls().extract(file_bytes)
 
         if not raw_text.strip():
             raise FileExtractionError(
-                f"No parseable text found in '{filename}'. "
-                "File may be empty, image-only, or corrupted."
+                f"No parseable text found in '{filename}' , File may be empty, image-only, or corrupted."
             )
 
         return raw_text
@@ -126,5 +126,5 @@ class RAGIngestionPipeline:
             )
         except Exception as exc:
             raise VectorStoreError(
-                f"ChromaDB write failed for '{filename}': {exc}"
+                internal_detail=f"ChromaDB write failed for '{filename}': {exc}"
             ) from exc

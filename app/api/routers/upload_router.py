@@ -16,7 +16,6 @@ from app.api.dependencies import get_document_processing_service
 from app.api.schemas import UserDocumentResponse
 from app.services.document_service import DocumentProcessingService
 from app.services.websocket_manager import websocket_manager
-from app.utils.exceptions import FileCannotBeDeleted, DocumentRetrievalError
 from app.utils.logging import LoggerFactory
 from app.services.job_tracker import JobTracker
 from app.api.dependencies import CurrentUser, get_job_tracker
@@ -99,24 +98,10 @@ async def get_documents(
         DocumentProcessingService, Depends(get_document_processing_service)
     ],
 ):
-    try:
-        logger.info("Getting documents from storage")
-        documents = await doc_service.get_documents(current_user.id)
-        logger.info(f"Found {len(documents)} documents")
-        return documents
-
-    except DocumentRetrievalError:
-        logger.error("Document retrieval error")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Failed to retrieve documents",
-        )
-    except Exception:
-        logger.error("An error occurred while fetching documents")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while fetching documents",
-        )
+    logger.info("Getting documents from storage")
+    documents = await doc_service.get_documents(current_user.id)
+    logger.info(f"Found {len(documents)} documents")
+    return documents
 
 
 @router.delete(
@@ -131,30 +116,9 @@ async def delete_file(
     ],
 ):
     logger.info(f"API request incoming to drop document resource: '{file_name}'")
-
-    try:
-        result = await doc_service.delete_document(
-            file_name=file_name, user_id=current_user.id
-        )
-        return result
-    except FileCannotBeDeleted as e:
-        logger.error(f"Error deleting file: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        )
-    except DocumentRetrievalError as e:
-        logger.error(f"Error deleting file: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        )
-    except Exception:
-        logger.error("An error occurred while deleting the file")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected internal server error occurred while processing your request.",
-        )
+    return await doc_service.delete_document(
+        file_name=file_name, user_id=current_user.id
+    )
 
 
 @router.websocket("/ws/batch/{batch_id}")

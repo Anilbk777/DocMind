@@ -1,14 +1,15 @@
-from app.repositories.document_repository import DocumentRepository
-from app.core.models import DocumentModel
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
-
 import asyncio
-
-from concurrent.futures import ThreadPoolExecutor
 import uuid
-from app.services.websocket_manager import websocket_manager
+from concurrent.futures import ThreadPoolExecutor
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.core.models import DocumentModel
 from app.ingestion.ingestion_pipeline import RAGIngestionPipeline
 from app.ingestion.rag_components import VectorStore
+from app.repositories.document_repository import DocumentRepository
+from app.services.job_tracker import JobTracker
+from app.services.websocket_manager import websocket_manager
 from app.storage.factory_storage import get_storage_service
 from app.utils.exceptions import (
     DocumentRetrievalError,
@@ -18,14 +19,16 @@ from app.utils.exceptions import (
     VectorStoreError,
 )
 from app.utils.logging import LoggerFactory
-from app.services.job_tracker import JobTracker
 
 logger = LoggerFactory.get_logger(__name__)
 
 
 class DocumentProcessingService:
     def __init__(
-        self, executor: ThreadPoolExecutor, session_factory: async_sessionmaker[AsyncSession], job_tracker: JobTracker
+        self,
+        executor: ThreadPoolExecutor,
+        session_factory: async_sessionmaker[AsyncSession],
+        job_tracker: JobTracker,
     ):
         """
         Manages async background document execution windows in development.
@@ -230,56 +233,62 @@ class DocumentProcessingService:
         async with self.session_factory() as session:
             document = await self.repo.get_by_filename(session, file_name, user_id)
 
-        if not document:
-            logger.warning(
-                f"Deletion aborted: Asset '{file_name}' not found for user {user_id}."
-            )
-            raise DocumentRetrievalError(f"Document '{file_name}' not found.")
+            if not document:
+                logger.warning(
+                    f"Deletion aborted: Asset '{file_name}' not found for user {user_id}."
+                )
+                raise DocumentRetrievalError(f"Document '{file_name}' not found.")
 
-        target_storage_uri = document.storage_uri
-        target_doc_id = str(document.id)
+            target_storage_uri = document.storage_uri
+            target_doc_id = str(document.id)
 
-        # 2. Drop target text chunks from Vector DB (ChromaDB)
-        try:
-            vector_store = VectorStore.get_vector_store()
-            await asyncio.to_thread(
-                vector_store.delete,
-                where={"$and": [{"source": file_name}, {"user_id": str(user_id)}]},
-            )
-            logger.info(
-                f"Vector embeddings matching source '{file_name}' dropped from ChromaDB."
-            )
-        except Exception as db_err:
-            logger.error(
-                f"Vector store database purge failed for '{file_name}': {str(db_err)}"
-            )
-            raise FileCannotBeDeleted("Vector store database purge failed.") from db_err
+            # 2. Drop target text chunks from Vector DB (ChromaDB)
+            try:
+                vector_store = VectorStore.get_vector_store()
+                await asyncio.to_thread(
+                    vector_store.delete,
+                    where={"$and": [{"source": file_name}, {"user_id": str(user_id)}]},
+                )
+                logger.info(
+                    f"Vector embeddings matching source '{file_name}' dropped from ChromaDB."
+                )
+            except Exception as db_err:
+                logger.error(
+                    f"Vector store database purge failed for '{file_name}': {str(db_err)}"
+                )
+                raise FileCannotBeDeleted(
+                    internal_detail=f"Vector store database purge failed. {str(db_err)}"
+                ) from db_err
 
-        # 3. Remove physical asset binary block from Disk / Storage
-        try:
-            storage_svc = get_storage_service()
-            await storage_svc.delete_file(target_storage_uri)
-            logger.info(
-                f"Physical asset removed from storage layer: {target_storage_uri}"
-            )
-        except Exception as disk_err:
-            logger.error(
-                f"Physical disk purge failed for asset path '{target_storage_uri}': {str(disk_err)}"
-            )
-            raise FileCannotBeDeleted("Physical disk purge failed.") from disk_err
+            # 3. Remove physical asset binary block from Disk / Storage
+            try:
+                storage_svc = get_storage_service()
+                await storage_svc.delete_file(target_storage_uri)
+                logger.info(
+                    f"Physical asset removed from storage layer: {target_storage_uri}"
+                )
+            except Exception as disk_err:
+                logger.error(
+                    f"Physical disk purge failed for asset path '{target_storage_uri}': {str(disk_err)}"
+                )
+                raise FileCannotBeDeleted(
+                    internal_detail=f"Physical disk purge failed. {str(disk_err)}"
+                ) from disk_err
 
-        # 4. Clean index rows from Relational DB (PostgreSQL)
-        try:
-            await self.repo.delete_by_id(session, target_doc_id)
-            logger.info(
-                f"Deleted document metadata index row for record ID: {target_doc_id}"
-            )
-        except Exception as db_del_err:
-            logger.error(
-                f"Failed to clear PostgreSQL document row for ID {target_doc_id}: {str(db_del_err)}"
-            )
-            raise FileCannotBeDeleted(
-                "Failed to delete document metadata from database."
-            ) from db_del_err
+            # 4. Clean index rows from Relational DB (PostgreSQL)
+            try:
+                await self.repo.delete_by_id(
+                    db=session, document_id=uuid.UUID(target_doc_id)
+                )
+                logger.info(
+                    f"Deleted document metadata index row for record ID: {target_doc_id}"
+                )
+            except Exception as db_del_err:
+                logger.error(
+                    f"Failed to clear PostgreSQL document row for ID {target_doc_id}: {str(db_del_err)}"
+                )
+                raise FileCannotBeDeleted(
+                    internal_detail=f"Failed to delete document metadata from database. {str(db_del_err)}"
+                ) from db_del_err
 
         return {"chroma_purged": True, "disk_removed": True}

@@ -37,7 +37,7 @@ class PDFExtractor(IExtractor):
         except Exception as e:
             raise FileExtractionError(
                 f"Failed parsing PDF stream layout via pymupdf: {str(e)}"
-            )
+            ) from e
 
 
 class DocxExtractor(IExtractor):
@@ -47,7 +47,7 @@ class DocxExtractor(IExtractor):
             doc = DocxDocument(stream)
             return "\n".join([paragraph.text for paragraph in doc.paragraphs])
         except Exception as e:
-            raise FileExtractionError(f"Failed parsing DOCX structural nodes: {str(e)}")
+            raise FileExtractionError(f"Failed parsing DOCX structural nodes: {str(e)}") from e
 
 
 class TxtExtractor(IExtractor):
@@ -60,7 +60,7 @@ class TxtExtractor(IExtractor):
             except Exception:
                 raise FileExtractionError(
                     f"Text encoding identification failed: {str(e)}"
-                )
+                ) from e
 
 
 # Registry Mapping Extensions to Extractor Classes (Open for extension, Closed for modification)

@@ -2,6 +2,7 @@ import asyncio
 import aiofiles
 from pathlib import Path
 from app.storage.base_storage import BaseStorageService
+from app.utils.exceptions import StorageError
 from app.utils.logging import LoggerFactory
 
 logger = LoggerFactory.get_logger(__name__)
@@ -29,7 +30,7 @@ class LocalStorageService(BaseStorageService):
 
         except Exception as e:
             logger.error(f"Local file write failure: {str(e)}")
-            raise e
+            raise StorageError(internal_detail=f"Local disk write failed: {str(e)}") from e
 
     async def get_documents(self) -> list[dict[str, str]]:
         """Get all stored documents"""
@@ -84,4 +85,4 @@ class LocalStorageService(BaseStorageService):
 
         except Exception as e:
             logger.error(f"Failed to delete local file '{file_path}': {str(e)}")
-            return False
+            raise StorageError(internal_detail=f"Local disk delete failed: {str(e)}") from e

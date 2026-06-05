@@ -1,11 +1,9 @@
-from pydantic_core import ValidationError
 from app.api.dependencies import CurrentUser
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 
 from app.api.schemas import ChatRequest
 from fastapi.responses import StreamingResponse
 from app.services.rag_service import RagOrchestrationService
-from app.utils.exceptions import RAGServiceException
 from app.services.retrieval_service import RetrievalService
 from app.utils.logging import LoggerFactory
 
@@ -30,28 +28,10 @@ router = APIRouter(prefix="/api/v1", tags=["RAG API"])
 async def chat(payload: ChatRequest, current_user: CurrentUser):
     logger.info(f"Chat streaming query received: {payload.query[:30]}...")
 
-    try:
-        rag_service = _build_rag_service(payload)
-        stream = rag_service.answer_question_stream(
-            question=payload.query, user_id=current_user.id
-        )
-
-    except ValidationError as e:
-        logger.warning(f"Validation error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        )
-    except RAGServiceException as e:
-        logger.warning(f"RAG service init error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
-        )
-    except Exception:
-        logger.error("Unhandled exception building RAG service.", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="An unexpected error occurred while processing your request.",
-        )
+    rag_service = _build_rag_service(payload)
+    stream = rag_service.answer_question_stream(
+        question=payload.query, user_id=current_user.id
+    )
 
     return StreamingResponse(
         stream,

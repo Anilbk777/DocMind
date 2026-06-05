@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.models import UserModel
 from app.api.dependencies import CurrentUser
 from app.core.auth import create_access_token, hash_password, verify_password
+from app.utils.exceptions import AuthenticationException, ValidationException
 
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -24,9 +25,9 @@ async def create_user(
     stmt = select(UserModel).where(func.lower(UserModel.email) == user.email.lower())
     result = await db.execute(stmt)
     if result.scalars().first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already exists",
+        raise ValidationException(
+            user_message="Email already exists",
+            internal_detail=f"Registration attempt failed: email {user.email} already in use.",
         )
     hashed_password = hash_password(user.password)
     new_user = UserModel(
@@ -52,10 +53,8 @@ async def login(
     if not existing_user or not verify_password(
         user.password, existing_user.hashed_password
     ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+        raise AuthenticationException(
+            internal_detail=f"Login failed for email: {user.username}"
         )
 
     access_token = create_access_token(

@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import Request, Depends, HTTPException, status
+from fastapi import Request, Depends
 from app.services.document_service import DocumentProcessingService
 from app.core.auth import oauth2_scheme, verify_access_token
 from app.core.database import get_db
@@ -9,6 +9,7 @@ from sqlalchemy import select
 from concurrent.futures import ThreadPoolExecutor
 from app.services.job_tracker import JobTracker
 from app.core.database import AsyncSessionLocal
+from app.utils.exceptions import AuthenticationException
 
 
 async def get_job_tracker():
@@ -32,19 +33,15 @@ async def get_current_user(
 ) -> UserModel:
     user_id = verify_access_token(token)
     if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+        raise AuthenticationException(
+            internal_detail="Invalid/Expired token presented to dependency."
         )
     stmt = select(UserModel).where(UserModel.id == user_id)
     result = await db.execute(stmt)
     user = result.scalars().first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+        raise AuthenticationException(
+            internal_detail=f"Token valid for ID {user_id}, but user record missing in DB."
         )
     return user
 

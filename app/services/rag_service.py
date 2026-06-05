@@ -1,3 +1,4 @@
+import uuid
 from typing import AsyncGenerator
 
 from langchain_core.output_parsers import StrOutputParser
@@ -8,7 +9,6 @@ from app.core.prompt_builder import GENERAL_PROMPT_TEMPLATE, RAG_PROMPT_TEMPLATE
 from app.services.retrieval_service import RetrievalService
 from app.utils.exceptions import RAGServiceException
 from app.utils.logging import LoggerFactory
-import uuid
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -16,8 +16,8 @@ logger = LoggerFactory.get_logger(__name__)
 class RagOrchestrationService:
     def __init__(
         self,
+        retrieval_service: RetrievalService,
         provider: LLMProvider = LLMProvider.GROQ,
-        retrieval_service: RetrievalService = None,
     ):
         self.retrieval_service = retrieval_service
         try:
@@ -29,7 +29,7 @@ class RagOrchestrationService:
                 exc_info=True,
             )
             raise RAGServiceException(
-                "Generation dependency initialization failed."
+                internal_detail=f"Generation dependency initialization failed. {str(e)}"
             ) from e
 
     def _build_chain(self, prompt: BasePromptTemplate):
@@ -82,7 +82,7 @@ class RagOrchestrationService:
         except Exception as e:
             logger.error("Retrieval stage failed.", exc_info=True)
             raise RAGServiceException(
-                "Failed to retrieve context for your question."
+                internal_detail=f"Failed to retrieve context for your question. {str(e)}"
             ) from e
 
         # --- Determine prompt + inputs once ---
