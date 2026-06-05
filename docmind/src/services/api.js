@@ -1,33 +1,41 @@
 const API_BASE = "http://127.0.0.1:8000/api/v1";
 const WS_BASE = "ws://127.0.0.1:8000/api/v1";
+
 /**
- * Upload multiple files in a single request.
- * Backend expects key "files" (plural) for list[UploadFile].
- * Returns: { batch_id, jobs: [{ job_id, filename }], accepted, discarded, ... }
+ * Parses a failed API response into a human-readable error string.
+ * Priority:
+ *   1. err.error  — your custom AppBaseException user_message
+ *   2. err.detail — FastAPI built-in (string or array of validation errors)
+ *   3. fallback   — generic message with status code
  */
+async function parseApiError(res, fallback) {
+  try {
+    const err = await res.json();
+    if (err.error) return err.error;
+    if (typeof err.detail === "string") return err.detail;
+    if (Array.isArray(err.detail))
+      return err.detail.map((e) => e.msg || String(e)).join(", ");
+  } catch (_) { /* empty */ }
+  return `${fallback} (${res.status})`;
+}
+
 export async function register(name, email, password) {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username: name, email, password }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Registration failed (${res.status})`);
-  }
+  if (!res.ok) throw new Error(await parseApiError(res, "Registration failed"));
   return await res.json();
 }
+
 export async function login(email, password) {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `username=${email}&password=${password}`,
+    body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    console.log(err);
-    throw new Error(err.detail || `Login failed (${res.status})`);
-  }
+  if (!res.ok) throw new Error(await parseApiError(res, "Login failed"));
   return await res.json();
 }
 
@@ -49,22 +57,15 @@ export async function getMe() {
 
 export async function uploadDocuments(files) {
   const token = localStorage.getItem("token");
-  if (!token) {
-    throw new Error("No token found");
-  }
+  if (!token) throw new Error("No token found");
   const fd = new FormData();
   files.forEach((file) => fd.append("files", file));
   const res = await fetch(`${API_BASE}/upload`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
     body: fd,
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Upload failed (${res.status})`);
-  }
+  if (!res.ok) throw new Error(await parseApiError(res, "Upload failed"));
   return await res.json();
 }
 
@@ -134,22 +135,13 @@ export async function getDocuments() {
 
 export async function deleteDocument(filename) {
   const token = localStorage.getItem("token");
-  if (!token) {
-    throw new Error("No token found");
-  }
+  if (!token) throw new Error("No token found");
   const res = await fetch(
     `${API_BASE}/documents/${encodeURIComponent(filename)}`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
+    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
   );
-  if (!res.ok && res.status !== 204) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Delete failed (${res.status})`);
-  }
+  if (!res.ok && res.status !== 204)
+    throw new Error(await parseApiError(res, "Delete failed"));
   return res.status;
 }
 
@@ -215,9 +207,7 @@ export async function deleteChatSession(sessionId) {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok && res.status !== 204) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Delete failed (${res.status})`);
-  }
+  if (!res.ok && res.status !== 204)
+    throw new Error(await parseApiError(res, "Delete failed"));
   return res.status;
 }

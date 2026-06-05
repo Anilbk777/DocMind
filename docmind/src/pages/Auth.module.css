@@ -1,40 +1,248 @@
-.container {
+/* ── Auth Pages Premium Design ── */
+
+.page {
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
   align-items: center;
-  height: 100vh;
-  background: var(--bg-primary);
+  justify-content: center;
+  background: var(--cream);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
 }
 
-.form {
+/* Soft decorative blobs */
+.page::before,
+.page::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.page::before {
+  width: 400px;
+  height: 400px;
+  background: rgba(223, 127, 131, 0.14);
+  top: -80px;
+  right: -80px;
+}
+
+.page::after {
+  width: 350px;
+  height: 350px;
+  background: rgba(240, 200, 190, 0.2);
+  bottom: -60px;
+  left: -60px;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--blush);
+  border-radius: 28px;
+  padding: 48px 40px 40px;
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Brand header ── */
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+.brandIcon {
+  width: 38px;
+  height: 38px;
+  background: var(--rose);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 6px 18px rgba(223, 127, 131, 0.3);
+}
+
+.brandName {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--charcoal);
+  letter-spacing: -0.02em;
+}
+
+.brandName span { color: var(--rose); }
+
+/* ── Headings ── */
+.heading {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.subheading {
+  font-size: 13px;
+  color: var(--charcoal);
+  opacity: 0.5;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+/* ── Form fields ── */
+.fieldGroup {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--charcoal);
+  opacity: 0.6;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.input {
   width: 100%;
-  max-width: 400px;
-  padding: 2rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 12px 16px;
+  background: var(--white);
+  border: 1px solid var(--blush);
+  border-radius: 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--charcoal);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.form input {
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-size: 1rem;
+.input:focus {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px rgba(223, 127, 131, 0.12);
 }
 
-.form button {
-  padding: 0.75rem;
+.input::placeholder {
+  color: var(--charcoal);
+  opacity: 0.3;
+}
+
+/* ── Password toggle ── */
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordWrapper .input {
+  width: 100%;
+  padding-right: 44px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--charcoal);
+  opacity: 0.35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+
+.eyeBtn:hover {
+  opacity: 0.8;
+}
+
+/* ── Submit button ── */
+.submitBtn {
+  width: 100%;
+  padding: 13px;
   background: var(--rose);
   color: white;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  border-radius: 14px;
+  font-size: 14px;
   font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
 }
 
+.submitBtn:hover:not(:disabled) {
+  background: var(--charcoal);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Error message ── */
 .error {
+  background: rgba(248, 116, 114, 0.08);
+  border: 1px solid rgba(248, 116, 114, 0.2);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #e0534f;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* ── Footer link ── */
+.footer {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--charcoal);
+  opacity: 0.6;
+}
+
+.footer a {
   color: var(--rose);
-  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+
+.footer a:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 36px 24px 28px;
+    border-radius: 22px;
+  }
 }

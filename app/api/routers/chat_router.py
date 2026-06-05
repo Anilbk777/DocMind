@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from app.services.chat_service import ChatService
 from app.utils.logging import LoggerFactory
 from app.utils.exceptions import AuthenticationException
+from app.utils.exceptions import RepositoryException
 
 logger = LoggerFactory.get_logger(__name__)
 
