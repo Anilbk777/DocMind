@@ -185,10 +185,10 @@ export async function* streamChat(query, provider, sessionId = null) {
 
   // Capture the session ID from headers if provided by server
   const serverSessionId = res.headers.get("X-Chat-Session-ID");
-  
+
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
-  
+
   // We yield the session ID first so the hook can capture it
   if (serverSessionId) {
     yield { type: "session_id", value: serverSessionId };

@@ -99,7 +99,7 @@ export function useChat() {
   const send = useCallback(
     async (query, provider) => {
       if (streaming) return;
-      console.log("[Chat] Sending message. Current Session ID:", currentSessionId);
+      // console.log("[Chat] Sending message. Current Session ID:", currentSessionId);
 
       // Add user message
       const userId = `u-${Date.now()}`;
@@ -120,12 +120,12 @@ export function useChat() {
       try {
         for await (const res of streamChat(query, provider, currentSessionId)) {
           if (res.type === "session_id") {
-            console.log("[Chat] Received Session ID from server:", res.value);
+            // console.log("[Chat] Received Session ID from server:", res.value);
             setCurrentSessionId(res.value);
             refreshSessions(); // Refresh list if a new session was created
             continue;
           }
-          
+
           const chunk = res.value;
           raw += chunk;
           const bodyOnly = stripSources(raw);
@@ -178,52 +178,3 @@ export function useChat() {
     deleteSession
   };
 }
-
-// import { useState, useEffect, useCallback } from "react";
-// import { streamChat } from "../services/api";
-
-// export function useChat() {
-//   const [messages, setMessages] = useState([]);
-//   const [streaming, setStreaming] = useState(false);
-
-//   // Clear messages when token changes
-//   useEffect(() => {
-//     const handleStorageChange = (e) => {
-//       if (e.key === "token" || !localStorage.getItem("token")) {
-//         setMessages([]); // Clear messages on logout/token change
-//       }
-//     };
-//     window.addEventListener("storage", handleStorageChange);
-//     return () => window.removeEventListener("storage", handleStorageChange);
-//   }, []);
-
-//   const send = useCallback(async (query, provider) => {
-//     setMessages((prev) => [...prev, { role: "user", content: query }]);
-//     setStreaming(true);
-
-//     try {
-//       let fullResponse = "";
-//       for await (const chunk of streamChat(query, provider)) {
-//         fullResponse += chunk;
-//         setMessages((prev) => {
-//           const updated = [...prev];
-//           updated[updated.length - 1] = {
-//             role: "assistant",
-//             content: fullResponse,
-//           };
-//           return updated;
-//         });
-//       }
-//     } catch (error) {
-//       console.error("Chat error:", error);
-//       setMessages((prev) => [
-//         ...prev,
-//         { role: "assistant", content: "Error: " + error.message },
-//       ]);
-//     } finally {
-//       setStreaming(false);
-//     }
-//   }, []);
-
-//   return { messages, send, streaming };
-// }
