@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routers.auth_router import router as auth_router
 from app.api.routers.chat_router import router as chat_router
 from app.api.routers.upload_router import router as upload_router
-from app.core.database import AsyncSessionLocal, Base, engine
+from app.core.database import AsyncSessionLocal, engine
 from app.utils.exceptions import setup_exception_handlers
 from app.utils.logging import LoggerFactory
 
@@ -22,9 +22,9 @@ MAX_INGESTION_WORKERS: int = min(_cpu_cores * 2, 10)
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
-    logger.info("Creating database tables if not exists...")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # logger.info("Creating database tables if not exists...")
+    # async with engine.begin() as conn:
+    #     await conn.run_sync(Base.metadata.create_all)
 
     app.state.session_factory = AsyncSessionLocal
     logger.info("Initializing application ThreadPoolExecutor...")
@@ -54,8 +54,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Chat-Session-ID"],
 )
-
-
 
 
 @app.get("/health")

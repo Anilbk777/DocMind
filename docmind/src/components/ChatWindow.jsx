@@ -27,7 +27,7 @@ export default function ChatWindow({ messages, hasMore, onLoadMore, loadingMore 
           <button 
             onClick={onLoadMore}
             disabled={loadingMore}
-            className="text-xs text-rose-400 hover:text-rose-300 transition-colors bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20 disabled:opacity-50"
+            className="text-xs text-rose-400 hover:text-rose-300 transition-colors bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20 disabled:opacity-50 cursor-pointer"
           >
             {loadingMore ? "Loading history..." : "Load older messages"}
           </button>

@@ -16,13 +16,13 @@ import styles from "./ChatApp.module.css";
 
 export default function ChatApp() {
   const { docs, refresh, remove } = useDocuments();
-  const { 
-    messages, 
-    send, 
-    streaming, 
-    sessions, 
-    currentSessionId, 
-    loadHistory, 
+  const {
+    messages,
+    send,
+    streaming,
+    sessions,
+    currentSessionId,
+    loadHistory,
     startNewChat,
     deleteSession,
     hasMore,
@@ -34,6 +34,7 @@ export default function ChatApp() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessionToDelete, setSessionToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
   // Load documents and user when component mounts
@@ -59,9 +60,18 @@ export default function ChatApp() {
   }, []);
 
   const handleConfirmDelete = async () => {
-    if (sessionToDelete) {
+    // Guard clause to prevent double execution if already processing
+    if (!sessionToDelete || isDeleting) return;
+
+    setIsDeleting(true);
+    try {
       await deleteSession(sessionToDelete);
-      setSessionToDelete(null);
+      setSessionToDelete(null); // Close modal on success
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      // Keep modal open if you want them to be able to try again on error
+    } finally {
+      setIsDeleting(false); // Reset loading state
     }
   };
 
@@ -112,7 +122,7 @@ export default function ChatApp() {
 
             <div className={styles.topbarTitleWrapper}>
               <span className={styles.topbarTitle}>
-                {currentSessionId 
+                {currentSessionId
                   ? sessions.find(s => s.id === currentSessionId)?.title || "Chat History"
                   : "New conversation"
                 }
@@ -131,7 +141,7 @@ export default function ChatApp() {
           <main className={styles.mainFrame}>
             <Routes>
               <Route path="chat" element={
-                <ChatView 
+                <ChatView
                   messages={messages}
                   send={send}
                   streaming={streaming}
@@ -141,7 +151,7 @@ export default function ChatApp() {
                 />
               } />
               <Route path="library" element={
-                <LibraryView 
+                <LibraryView
                   docs={docs}
                   onFiles={upload}
                   onDelete={remove}
@@ -156,13 +166,14 @@ export default function ChatApp() {
         </div>
       </div>
 
-      <ConfirmationModal 
+      <ConfirmationModal
         isOpen={!!sessionToDelete}
         title="Delete Chat Session?"
         message="Are you sure you want to delete this conversation? This action cannot be undone."
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
-        confirmText="Delete Session"
+        confirmText={isDeleting ? "Deleting..." : "Delete Session"}
+        isLoading={isDeleting}
       />
     </div>
   );
