@@ -16,8 +16,27 @@ wheels/
 files/
 .env
 
+
 ./media
 ./media/documents
 ./dev_chroma_db
 
 
+.vscode/
+
+.pytest_cache/  
+
+.env
+.env.example
+.vscode/
+launch.json
+settings.json
+
+Dockerfile
+requirements.txt
+
+.python-version
+.env.production
+.env.local
+
+.env.production

@@ -7,7 +7,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import TextSplitter
 
 from app.ingestion.file_extractor import EXTRACTOR_REGISTRY
-from app.ingestion.rag_components import VectorStore, text_chunker
+from app.ingestion.rag_components import VectorStore, text_chunker, EmbeddingsModel
 from app.utils.exceptions import (
     FileExtractionError,
     UnsupportedFileTypeError,
@@ -41,7 +41,10 @@ class RAGIngestionPipeline:
         # Phase 3: Embed
         logger.info("[Phase 3] Computing embeddings for '%s'…", filename)
         texts, metadatas, ids = self._prepare_vectors(chunks)
-        embeddings = self._vector_store._embedding_function.embed_documents(texts)
+        
+        # embeddings = self._vector_store._embedding_function.embed_documents(texts)
+        embedding_model = EmbeddingsModel.get_embedding_model()
+        embeddings = [embedding_model.embed_query(text) for text in texts]
 
         # Phase 4: Store
         logger.info(

@@ -1,6 +1,8 @@
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+
+# from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import threading
 import chromadb
 import os
@@ -18,27 +20,48 @@ text_chunker = RecursiveCharacterTextSplitter(
 
 
 class EmbeddingsModel:
-    _embedding_model: HuggingFaceEmbeddings | None = None
+    _embedding_model: GoogleGenerativeAIEmbeddings | None = None
     _embedding_lock: threading.Lock = threading.Lock()
 
     @classmethod
-    def get_embedding_model(cls) -> HuggingFaceEmbeddings:
-        """Returns the shared embedding model, loading it only on first call."""
+    def get_embedding_model(cls) -> GoogleGenerativeAIEmbeddings:
+        """Returns the shared Google embedding model, loading it only on first call."""
         if cls._embedding_model is not None:
             return cls._embedding_model
 
         with cls._embedding_lock:
             if cls._embedding_model is None:
-                logger.info("Loading local HuggingFace embedding model...")
-                cls._embedding_model = HuggingFaceEmbeddings(
-                    model_name="all-MiniLM-L6-v2",
-                    encode_kwargs={
-                        "batch_size": 32,  # process 32 chunks at once instead of 1
-                        "normalize_embeddings": True,
-                    },
-                    model_kwargs={"device": "cpu"},
+                logger.info("Loading Google Generative AI embedding model...")
+                cls._embedding_model = GoogleGenerativeAIEmbeddings(
+                    model="models/gemini-embedding-2-preview",
+                    google_api_key=os.getenv("GOOGLE_API_KEY"),
+                    output_dimensionality=768,  # standard, matches chromadb default
                 )
         return cls._embedding_model
+
+
+# class EmbeddingsModel:
+#     _embedding_model: HuggingFaceEmbeddings | None = None
+#     _embedding_lock: threading.Lock = threading.Lock()
+
+#     @classmethod
+#     def get_embedding_model(cls) -> HuggingFaceEmbeddings:
+#         """Returns the shared embedding model, loading it only on first call."""
+#         if cls._embedding_model is not None:
+#             return cls._embedding_model
+
+#         with cls._embedding_lock:
+#             if cls._embedding_model is None:
+#                 logger.info("Loading local HuggingFace embedding model...")
+#                 cls._embedding_model = HuggingFaceEmbeddings(
+#                     model_name="all-MiniLM-L6-v2",
+#                     encode_kwargs={
+#                         "batch_size": 32,  # process 32 chunks at once instead of 1
+#                         "normalize_embeddings": True,
+#                     },
+#                     model_kwargs={"device": "cpu"},
+#                 )
+#         return cls._embedding_model
 
 
 class VectorStore:
@@ -87,9 +110,7 @@ class VectorStore:
                     logger.info("Cloud Vector Store configured successfully.")
 
                 except Exception as e:
-                    logger.error(
-                        f"Failed to initialize Chroma Cloud Client: {str(e)}"
-                    )
+                    logger.error(f"Failed to initialize Chroma Cloud Client: {str(e)}")
                     raise e
 
         return cls._chroma_vector_store

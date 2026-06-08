@@ -1,0 +1,56 @@
+# Git
+.git
+.gitignore
+
+# Environment & secrets
+.env
+.env.*
+.env.example
+
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info/
+
+# Virtual environments
+.venv/
+
+# Testing
+tests/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Local data & storage
+files/
+media/
+dev_chroma_db/
+
+# IDE & editor
+.vscode/
+launch.json
+settings.json
+.docmind/
+
+# Docker (no need to copy these into the image)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Dependency lock files (using requirements.txt instead)
+uv.lock
+poetry.lock
+package.json
+package-lock.json
+node_modules/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+

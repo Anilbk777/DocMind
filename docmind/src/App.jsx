@@ -41,7 +41,7 @@ export default function App() {
         />
         <Route path="/register" element={<Register />} />
         <Route
-          path="/app"
+          path="/app/*"
           element={
             isAuthenticated ? <ChatApp /> : <Navigate to="/login" replace />
           }

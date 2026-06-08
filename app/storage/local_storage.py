@@ -1,5 +1,6 @@
 import asyncio
-import aiofiles
+
+# import aiofiles
 from pathlib import Path
 from app.storage.base_storage import BaseStorageService
 from app.utils.exceptions import StorageError
@@ -22,15 +23,17 @@ class LocalStorageService(BaseStorageService):
         file_path = target_dir / file_name
 
         try:
-            async with aiofiles.open(file_path, "wb") as f:
-                await f.write(file_bytes)
+            # async with aiofiles.open(file_path, "wb") as f:
+            #     await f.write(file_bytes)
 
             logger.info(f"File bytes successfully stored locally at: {file_path}")
             return str(file_path)
 
         except Exception as e:
             logger.error(f"Local file write failure: {str(e)}")
-            raise StorageError(internal_detail=f"Local disk write failed: {str(e)}") from e
+            raise StorageError(
+                internal_detail=f"Local disk write failed: {str(e)}"
+            ) from e
 
     async def get_documents(self) -> list[dict[str, str]]:
         """Get all stored documents"""
@@ -85,4 +88,6 @@ class LocalStorageService(BaseStorageService):
 
         except Exception as e:
             logger.error(f"Failed to delete local file '{file_path}': {str(e)}")
-            raise StorageError(internal_detail=f"Local disk delete failed: {str(e)}") from e
+            raise StorageError(
+                internal_detail=f"Local disk delete failed: {str(e)}"
+            ) from e

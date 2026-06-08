@@ -16,8 +16,11 @@ from app.utils.logging import LoggerFactory
 load_dotenv()
 logger = LoggerFactory.get_logger(__name__)
 
+# _cpu_cores: int = os.cpu_count() or 1
+# MAX_INGESTION_WORKERS: int = min(_cpu_cores * 2, 10)
+_is_production = os.getenv("ENVIRONMENT", "development") == "production"
 _cpu_cores: int = os.cpu_count() or 1
-MAX_INGESTION_WORKERS: int = min(_cpu_cores * 2, 10)
+MAX_INGESTION_WORKERS: int = 2 if _is_production else min(_cpu_cores * 2, 10)
 
 
 @asynccontextmanager
@@ -46,9 +49,10 @@ app.include_router(upload_router)
 app.include_router(chat_router)
 app.include_router(auth_router)
 
+origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

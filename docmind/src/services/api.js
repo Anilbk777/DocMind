@@ -1,6 +1,10 @@
-const API_BASE = "http://127.0.0.1:8000/api/v1";
-const WS_BASE = "ws://127.0.0.1:8000/api/v1";
+// const API_BASE = "http://127.0.0.1:8000/api/v1";
+// const WS_BASE = "ws://127.0.0.1:8000/api/v1";
+const API_BASE = import.meta.env.VITE_API_BASE;
+const WS_BASE = import.meta.env.VITE_WS_BASE;
 
+console.log("API_BASE:", API_BASE);
+console.log("WS_BASE:", WS_BASE);
 /**
  * Parses a failed API response into a human-readable error string.
  * Priority:
@@ -15,7 +19,9 @@ async function parseApiError(res, fallback) {
     if (typeof err.detail === "string") return err.detail;
     if (Array.isArray(err.detail))
       return err.detail.map((e) => e.msg || String(e)).join(", ");
-  } catch (_) { /* empty */ }
+  } catch (_) {
+    /* empty */
+  }
   return `${fallback} (${res.status})`;
 }
 
