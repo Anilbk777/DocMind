@@ -16,8 +16,7 @@ from app.utils.logging import LoggerFactory
 load_dotenv()
 logger = LoggerFactory.get_logger(__name__)
 
-# _cpu_cores: int = os.cpu_count() or 1
-# MAX_INGESTION_WORKERS: int = min(_cpu_cores * 2, 10)
+
 _is_production = os.getenv("ENVIRONMENT", "development") == "production"
 _cpu_cores: int = os.cpu_count() or 1
 MAX_INGESTION_WORKERS: int = 2 if _is_production else min(_cpu_cores * 2, 10)
