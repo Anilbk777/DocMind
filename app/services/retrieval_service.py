@@ -11,7 +11,7 @@ class RetrievalService:
     def __init__(
         self,
         similarity_threshold: float = 0.4,
-        max_results: int = 5,
+        max_results: int = 7,
     ):
         self.vector_store = VectorStore.get_vector_store()
         self.similarity_threshold = similarity_threshold

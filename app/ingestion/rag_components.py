@@ -2,13 +2,18 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import threading
-
+import chromadb
+import os
+from dotenv import load_dotenv
 from app.utils.logging import LoggerFactory
+
+load_dotenv()
+
 
 logger = LoggerFactory.get_logger(__name__)
 
 text_chunker = RecursiveCharacterTextSplitter(
-    chunk_size=1000, chunk_overlap=100, separators=["\n\n", "\n", " ", ""]
+    chunk_size=1200, chunk_overlap=100, separators=["\n\n", "\n", " ", ""]
 )
 
 
@@ -42,17 +47,49 @@ class VectorStore:
 
     @classmethod
     def get_vector_store(cls) -> Chroma:
-        """Returns the shared Chroma vector store, loading it only on first call."""
+        """Returns the shared cloud Chroma vector store."""
         if cls._chroma_vector_store is not None:
             return cls._chroma_vector_store
 
         with cls._lock:
             if cls._chroma_vector_store is None:
-                logger.info("Configuring development ephemeral Vector Store...")
-                cls._chroma_vector_store = Chroma(
-                    persist_directory="./dev_chroma_db",
-                    collection_name="dev_rag_collection",
-                    embedding_function=EmbeddingsModel.get_embedding_model(),
-                    collection_metadata={"hnsw:space": "cosine"},
-                )
+                logger.info("Configuring cloud Vector Store...")
+
+                api_key = os.getenv("CHROMA_API_KEY")
+                tenant = os.getenv("CHROMA_TENANT")
+                database = os.getenv("CHROMA_DATABASE", "default")
+
+                if not api_key or not tenant:
+                    raise ValueError(
+                        f"Chroma Cloud configuration missing from environment! "
+                        f"CHROMA_API_KEY={'Found' if api_key else 'MISSING'}, "
+                        f"CHROMA_TENANT={'Found' if tenant else 'MISSING'}"
+                    )
+
+                try:
+                    chroma_client = chromadb.CloudClient(
+                        cloud_host="europe-west1.gcp.trychroma.com",
+                        cloud_port=443,
+                        tenant=tenant,
+                        database=database,
+                        api_key=api_key,
+                    )
+
+                    cls._chroma_vector_store = Chroma(
+                        client=chroma_client,
+                        collection_name=os.getenv(
+                            "CHROMA_COLLECTION_NAME", "default_collection"
+                        ),
+                        embedding_function=EmbeddingsModel.get_embedding_model(),
+                        collection_metadata={"hnsw:space": "cosine"},
+                    )
+
+                    logger.info("Cloud Vector Store configured successfully.")
+
+                except Exception as e:
+                    logger.error(
+                        f"Failed to initialize Chroma Cloud Client: {str(e)}"
+                    )
+                    raise e
+
         return cls._chroma_vector_store
