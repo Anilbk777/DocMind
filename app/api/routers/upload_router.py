@@ -22,6 +22,7 @@ from app.api.dependencies import CurrentUser, get_job_tracker
 
 logger = LoggerFactory.get_logger(__name__)
 
+MAX_DOCUMENTS_PER_USER = 10
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 MAX_FILES_PER_BATCH = 5
 
@@ -40,6 +41,16 @@ async def upload_document(
 ):
     user_id = current_user.id
     logger.info(f"User {user_id} uploading files")
+    existing_docs = await doc_service.count_documents(user_id)
+    logger.info(f"User {user_id} has {existing_docs} documents")
+    if existing_docs >= MAX_DOCUMENTS_PER_USER:
+        logger.info(
+            f"User {user_id} has reached the maximum limit of {MAX_DOCUMENTS_PER_USER} documents"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You have reached the maximum limit of {MAX_DOCUMENTS_PER_USER} documents. Please delete existing documents before uploading new ones.",
+        )
 
     logger.info("Files received")
     accepted_files = files[:MAX_FILES_PER_BATCH]

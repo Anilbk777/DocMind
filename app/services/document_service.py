@@ -292,3 +292,12 @@ class DocumentProcessingService:
                 ) from db_del_err
 
         return {"chroma_purged": True, "disk_removed": True}
+
+    async def count_documents(self, user_id: uuid.UUID) -> int:
+        """Counts the number of documents for a specific user."""
+        try:
+            async with self.session_factory() as session:
+                return await self.repo.count_by_user(session, user_id)
+        except Exception as e:
+            logger.error(f"Failed to count documents: {str(e)}")
+            raise DocumentRetrievalError(f"Failed to count documents: {str(e)}")

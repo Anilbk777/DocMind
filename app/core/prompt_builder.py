@@ -1,4 +1,4 @@
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 # =====================================================================
 # RAG PIPELINE PROMPTS
@@ -21,32 +21,8 @@ RAG_HUMAN_INSTRUCTION = "Question: {question}"
 RAG_PROMPT_TEMPLATE = ChatPromptTemplate.from_messages(
     [
         ("system", RAG_SYSTEM_INSTRUCTION),
+        MessagesPlaceholder(variable_name="history"),
         ("human", RAG_HUMAN_INSTRUCTION),
-    ]
-)
-
-
-# =====================================================================
-# FALLBACK WEB SEARCH PROMPTS
-# =====================================================================
-
-WEB_FALLBACK_SYSTEM_INSTRUCTION = (
-    "You are a helpful assistant. The internal documentation did not yield a "
-    "match for this query, so external web snippets have been fetched to assist you.\n\n"
-    "Synthesize an answer using the search engine snippets below. Maintain structural "
-    "clarity and cite general trends or entities where applicable.\n\n"
-    "--- START WEB SNIPPETS ---\n"
-    "{context}\n"
-    "--- END WEB SNIPPETS ---"
-)
-
-WEB_FALLBACK_HUMAN_INSTRUCTION = "User Query: {question}"
-
-# Compiled Fallback Web Prompt
-WEB_FALLBACK_PROMPT_TEMPLATE = ChatPromptTemplate.from_messages(
-    [
-        ("system", WEB_FALLBACK_SYSTEM_INSTRUCTION),
-        ("human", WEB_FALLBACK_HUMAN_INSTRUCTION),
     ]
 )
 
@@ -69,6 +45,7 @@ GENERAL_HUMAN_INSTRUCTION = "User Query: {question}"
 GENERAL_PROMPT_TEMPLATE = ChatPromptTemplate.from_messages(
     [
         ("system", GENERAL_SYSTEM_INSTRUCTION),
+        MessagesPlaceholder(variable_name="history"),
         ("human", GENERAL_HUMAN_INSTRUCTION),
     ]
 )

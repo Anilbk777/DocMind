@@ -3,8 +3,8 @@
 const API_BASE = import.meta.env.VITE_API_BASE;
 const WS_BASE = import.meta.env.VITE_WS_BASE;
 
-console.log("API_BASE:", API_BASE);
-console.log("WS_BASE:", WS_BASE);
+// console.log("API_BASE:", API_BASE);
+// console.log("WS_BASE:", WS_BASE);
 /**
  * Parses a failed API response into a human-readable error string.
  * Priority:

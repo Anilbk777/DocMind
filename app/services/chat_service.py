@@ -45,11 +45,15 @@ class ChatService:
             session = await self.repo.create_session(db, user_id, title)
             session_id = session.id
 
+        history = await self._get_chat_history(db, session_id, limit=5)
+
         # 2. Save User Message
         await self.repo.save_message(db, session_id, role="user", content=query)
 
         # 3. Get RAG Stream
-        raw_stream = self.rag_service.answer_question_stream(query, user_id)
+        raw_stream = self.rag_service.answer_question_stream(
+            question=query, user_id=user_id, history=history
+        )
 
         # 4. Wrap stream to capture for persistence
         async def persistence_wrapper() -> AsyncGenerator[str, None]:
@@ -87,5 +91,16 @@ class ChatService:
                 raise e
 
         return session_id, persistence_wrapper()
+
     async def delete_session(self, db: AsyncSession, session_id: uuid.UUID) -> bool:
         return await self.repo.delete_session(db, session_id)
+
+    async def _get_chat_history(
+        self, db: AsyncSession, session_id: uuid.UUID, limit: int = 5
+    ) -> list[tuple[str, str]]:
+        messages = await self.repo.get_recent_messages(db, session_id, limit)
+        formatted_history = []
+        for msg in messages:
+            role_type = "human" if msg.role == "user" else "ai"
+            formatted_history.append((role_type, msg.content))
+        return formatted_history

@@ -56,7 +56,7 @@ class RagOrchestrationService:
             )
 
     async def answer_question_stream(
-        self, question: str, user_id: uuid.UUID
+        self, question: str, user_id: uuid.UUID, history: list[tuple[str, str]]
     ) -> AsyncGenerator[str, None]:
         """
         Public async generator. Yields text chunks suitable for StreamingResponse.
@@ -88,10 +88,10 @@ class RagOrchestrationService:
         # --- Determine prompt + inputs once ---
         if is_internal_data:
             prompt = RAG_PROMPT_TEMPLATE
-            inputs = {"context": context, "question": question}
+            inputs = {"context": context, "question": question,"history": history}
         else:
             prompt = GENERAL_PROMPT_TEMPLATE
-            inputs = {"question": question}
+            inputs = {"question": question,"history": history}
 
         # --- Stream generation — errors here are mid-stream ---
         try:
