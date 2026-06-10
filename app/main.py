@@ -48,8 +48,8 @@ app.include_router(upload_router)
 app.include_router(chat_router)
 app.include_router(auth_router)
 
-# origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
-origins = ["http://localhost:5173"]
+origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+# origins = ["http://localhost:5173"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
