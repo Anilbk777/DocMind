@@ -96,6 +96,10 @@ export default function Login({ setIsAuthenticated }) {
         <p className={styles.footer}>
           Don't have an account? <a href="/register">Create one</a>
         </p>
+        <div className="mt-4">
+          <p>Email: [test@gmail.com]</p>
+          <p>Password: [test@123]</p>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
-// const API_BASE = "http://127.0.0.1:8000/api/v1";
-// const WS_BASE = "ws://127.0.0.1:8000/api/v1";
-const API_BASE = import.meta.env.VITE_API_BASE;
-const WS_BASE = import.meta.env.VITE_WS_BASE;
+const API_BASE = "http://127.0.0.1:8000/api/v1";
+const WS_BASE = "ws://127.0.0.1:8000/api/v1";
+// const API_BASE = import.meta.env.VITE_API_BASE;
+// const WS_BASE = import.meta.env.VITE_WS_BASE;
 
 // console.log("API_BASE:", API_BASE);
 // console.log("WS_BASE:", WS_BASE);
